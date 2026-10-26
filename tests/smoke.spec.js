@@ -76,6 +76,11 @@ test('first visit to settings scans the site and shows the review', async ({ pag
   await expectFinding(review, 'Sunday · Bible Study', '10:00 AM', false);
   await expectFinding(review, 'Sunday · Worship', '9:00 AM', true);
   await expectFinding(review, 'Sunday · Worship', '11:00 AM', true);
+  // A footer that runs "Sun 11 AM" into "ADDRESS 212 Peach Bottom Road" (GCCWS):
+  // the address starts at the house number, not at the service time.
+  await expectFinding(review, 'Address', '212 Peach Bottom Road, Willow Street, PA 17584', true);
+  await expect(review).not.toContainText('11 AM ADDRESS');
+  await expectFinding(review, 'Town and state', 'Willow Street, PA', true);
 
   await page.getByRole('button', { name: 'Use selected' }).click();
   await expect(page.locator('.notice-success')).toContainText(/Filled in \d+ settings? from your site/);

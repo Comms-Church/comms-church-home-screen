@@ -500,7 +500,15 @@ class CHS_Scanner {
 			$suffix = 'Road|Rd|Street|St|Avenue|Ave|Pike|Lane|Ln|Drive|Dr|Boulevard|Blvd|Highway|Hwy|Way|Court|Ct|Place|Pl|Parkway|Pkwy|Circle|Cir|Trail|Trl|Terrace|Route|Rte';
 			foreach ( $texts as $t ) {
 				if ( preg_match( '/\b(\d{1,6}\s+(?:[NSEW]\.?\s+)?[A-Z0-9][A-Za-z0-9.\' -]{1,40}?\s(?:' . $suffix . ')\.?)(?:,?\s+(?:Suite|Ste\.?|Unit)\s*\w+)?,?\s+([A-Z][A-Za-z .\'-]{1,30}?),\s*([A-Z]{2})\s+(\d{5})(?:-\d{4})?\b/', $t['text'], $m ) ) {
-					$street = trim( $m[1] ) . ', ' . trim( $m[2] ) . ', ' . $m[3] . ' ' . $m[4];
+					$line = trim( $m[1] );
+					// Page text runs blocks together, so a footer reading "Sun 11 AM" then
+					// "ADDRESS 212 Peach Bottom Road" matches from the 11. Start at the last house
+					// number when what comes before it is a time or an all-caps heading
+					// (not when it is part of the street, as in "500 7 Mile Road").
+					if ( preg_match( '/^(.*)\b(\d{1,6}\s+(?:[NSEW]\.?\s+)?[A-Z].*)$/', $line, $n ) && preg_match( '/\b[AaPp][Mm]\b|\b[A-Z]{3,}\b/', $n[1] ) ) {
+						$line = $n[2];
+					}
+					$street = $line . ', ' . trim( $m[2] ) . ', ' . $m[3] . ' ' . $m[4];
 					$town   = trim( $m[2] ) . ', ' . $m[3];
 					break;
 				}

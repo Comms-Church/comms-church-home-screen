@@ -25,6 +25,10 @@
     {
       "step": "runPHP",
       "code": "<?php require_once '/wordpress/wp-load.php'; update_option( 'bricks_color_palette', array( array( 'id' => 'a8a9df', 'name' => 'CC Brand', 'colors' => array( array( 'id' => 'b6daf5', 'raw' => 'var(--cc-color-primary)', 'light' => '#0066ff' ), array( 'id' => 'd9719a', 'raw' => 'var(--cc-color-dark)', 'light' => '#0a0a0a' ), array( 'id' => 'd53692', 'raw' => 'var(--cc-color-surface)', 'light' => '#ffffff' ) ) ) ) ); if ( get_page_by_path( 'sunday-gatherings' ) ) { return; } wp_insert_post([ 'post_type' => 'page', 'post_status' => 'publish', 'post_title' => 'Sunday Gatherings', 'post_name' => 'sunday-gatherings', 'post_content' => '<h3>Sundays at Harbor</h3><p>8:30 AM &middot; Classic gathering<br>10:45 AM &middot; Contemporary gathering</p><p>Sunday School 9:15 AM</p>' ]);"
+    },
+    {
+      "step": "runPHP",
+      "code": "<?php require_once '/wordpress/wp-load.php'; if ( get_page_by_path( 'contact' ) ) { return; } wp_insert_post([ 'post_type' => 'page', 'post_status' => 'publish', 'post_title' => 'Contact', 'post_name' => 'contact', 'post_content' => '<h3>SERVICES</h3><div>Sun 9:15 AM | Sun 11 AM</div><h3>ADDRESS</h3><div>212 Peach Bottom Road</div><div>Willow Street, PA 17584</div>' ]);"
     }
   ]
 }
