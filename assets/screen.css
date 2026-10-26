@@ -1,4 +1,4 @@
-/* Church Home Screen — front end.
+/* Church Links — front end.
    Layout: a phone OS. Wallpaper, swipe-up lock screen, app grid + dock, apps open as full-screen panels.
    On computers the screen sits in a phone frame; on phones it fills the screen. */
 
@@ -208,6 +208,9 @@ button.widget:active { transform: scale(.97); }
 }
 .tile svg { width: 54%; height: 54%; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
 .app:active .tile { transform: scale(.9); filter: brightness(.88); }
+.tile { position: relative; }
+/* A watched link that changed this week. */
+.tile .badge { position: absolute; top: -4px; right: -4px; width: 16px; height: 16px; border-radius: 50%; background: #ff3b30; box-shadow: 0 0 0 2px rgba(0, 0, 0, .15); }
 .app-label { font-size: 12px; max-width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-shadow: 0 1px 3px rgba(0, 0, 0, .4); }
 .tile.cal { background: #fff; color: var(--paper-ink); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px; }
 .cal-dow { font: 700 10px var(--f-body); letter-spacing: .06em; color: #d8402f; text-transform: uppercase; }

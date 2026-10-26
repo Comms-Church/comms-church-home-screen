@@ -1,4 +1,4 @@
-/* Church Home Screen — settings page. */
+/* Church Links — settings page. */
 .chs-admin { max-width: 980px; }
 .chs-admin .description, .chs-admin small { color: #50575e; }
 
@@ -79,3 +79,18 @@
 .chs-pco-status { margin: 8px 0 0; padding: 6px 10px; border-left: 4px solid; background: #fff; }
 .chs-pco-status.is-ok { border-color: #00a32a; }
 .chs-pco-status.is-error { border-color: #d63638; }
+
+.chs-hero-actions { display: flex; gap: 8px; flex-wrap: wrap; margin: 14px 0 0; }
+.chs-qr { flex: none; width: 148px; height: 148px; padding: 10px; background: #fff; border-radius: 10px; }
+.chs-qr svg { display: block; width: 100%; height: 100%; }
+.chs-sub { margin: 22px 0 4px; font-size: 13px; text-transform: uppercase; letter-spacing: .06em; color: #50575e; }
+
+.chs-url-watch, .chs-watch-field { display: none !important; }
+.chs-app[data-type="watch"] .chs-url-link { display: none; }
+.chs-app[data-type="watch"] .chs-url-watch { display: inline !important; }
+.chs-app[data-type="watch"] .chs-url-field { visibility: visible; }
+.chs-app[data-type="watch"] .chs-watch-field { display: flex !important; }
+.chs-watch-field { grid-column: 3 / -1; align-items: end; gap: 16px; flex-wrap: wrap; }
+.chs-watch-field label { flex: 0 1 260px; }
+.chs-watch-field small { flex: 1 1 300px; padding-bottom: 6px; }
+.chs-watch-now.is-empty { color: #996800; }

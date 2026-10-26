@@ -5,7 +5,7 @@
  * Nothing here saves on its own. scan() returns findings; the church reviews
  * them and apply() saves only the ones they check.
  *
- * @package ChurchHomeScreen
+ * @package ChurchLinks
  */
 
 defined( 'ABSPATH' ) || exit;
@@ -39,7 +39,7 @@ class CHS_Scanner {
 	 */
 	public static function handle_scan() {
 		if ( ! current_user_can( 'manage_options' ) ) {
-			wp_die( esc_html__( 'You do not have permission to do that.', 'comms-church-home-screen' ) );
+			wp_die( esc_html__( 'You do not have permission to do that.', 'comms-church-links' ) );
 		}
 		check_admin_referer( 'chs_scan' );
 		set_transient( self::key(), self::scan(), HOUR_IN_SECONDS );
@@ -52,7 +52,7 @@ class CHS_Scanner {
 	 */
 	public static function handle_apply() {
 		if ( ! current_user_can( 'manage_options' ) ) {
-			wp_die( esc_html__( 'You do not have permission to do that.', 'comms-church-home-screen' ) );
+			wp_die( esc_html__( 'You do not have permission to do that.', 'comms-church-links' ) );
 		}
 		check_admin_referer( 'chs_apply_scan' );
 		$findings = get_transient( self::key() );
@@ -93,6 +93,9 @@ class CHS_Scanner {
 				foreach ( $s['apps'] as $i => $a ) {
 					if ( 'link' === $a['type'] && '' === $a['url'] && strtolower( $a['label'] ) === $f['fill'] ) {
 						$s['apps'][ $i ]['url'] = esc_url_raw( $f['show'] );
+						if ( ! empty( $f['fill_type'] ) ) {
+							$s['apps'][ $i ]['type'] = $f['fill_type'];
+						}
 						break;
 					}
 				}
@@ -119,9 +122,11 @@ class CHS_Scanner {
 	 * @return bool
 	 */
 	private static function has_app( $apps, $app ) {
+		// Links and watched pages are the same thing for this check: one per address, or per label while unset.
+		$linkish = array( 'link', 'watch' );
 		foreach ( $apps as $a ) {
-			if ( 'link' === $app['type'] ) {
-				if ( 'link' === $a['type'] && ( untrailingslashit( $a['url'] ) === untrailingslashit( $app['url'] ) || ( '' === $a['url'] && strtolower( $a['label'] ) === strtolower( $app['label'] ) ) ) ) {
+			if ( in_array( $app['type'], $linkish, true ) ) {
+				if ( in_array( $a['type'], $linkish, true ) && ( untrailingslashit( $a['url'] ) === untrailingslashit( $app['url'] ) || ( '' === $a['url'] && strtolower( $a['label'] ) === strtolower( $app['label'] ) ) ) ) {
 					return true;
 				}
 			} elseif ( $a['type'] === $app['type'] ) {
@@ -231,7 +236,7 @@ class CHS_Scanner {
 	 * @param int $id Post id.
 	 * @return string
 	 */
-	private static function stored_content( $id ) {
+	public static function stored_content( $id ) {
 		$html = (string) get_post_field( 'post_content', $id );
 		foreach ( (array) get_post_meta( $id ) as $key => $values ) {
 			if ( '_edit_lock' === $key || '_edit_last' === $key ) {
@@ -436,8 +441,8 @@ class CHS_Scanner {
 		// (page builders like Bricks often show a different name than the WordPress site title).
 		$name = ! empty( $org['name'] ) && is_string( $org['name'] ) ? $org['name'] : $site_name;
 		if ( $name && 0 !== strcasecmp( $name, $s['church_name'] ) ) {
-			$note = trim( ( $name === $site_name ? __( 'From the header of your homepage.', 'comms-church-home-screen' ) . ' ' : '' ) . self::was( $s['church_name'] ) );
-			self::add( $f, $g, __( 'Church name', 'comms-church-home-screen' ), $name, array( 'set' => array( 'church_name' => $name ) ), $note );
+			$note = trim( ( $name === $site_name ? __( 'From the header of your homepage.', 'comms-church-links' ) . ' ' : '' ) . self::was( $s['church_name'] ) );
+			self::add( $f, $g, __( 'Church name', 'comms-church-links' ), $name, array( 'set' => array( 'church_name' => $name ) ), $note );
 		}
 
 		// Phone: structured data, then tel: links, then text.
@@ -460,7 +465,7 @@ class CHS_Scanner {
 			}
 		}
 		if ( $phone && $phone !== $s['phone'] ) {
-			self::add( $f, $g, __( 'Phone', 'comms-church-home-screen' ), $phone, array( 'set' => array( 'phone' => $phone ) ), self::was( $s['phone'] ) );
+			self::add( $f, $g, __( 'Phone', 'comms-church-links' ), $phone, array( 'set' => array( 'phone' => $phone ) ), self::was( $s['phone'] ) );
 		}
 
 		// Email: structured data, then mailto: links.
@@ -478,7 +483,7 @@ class CHS_Scanner {
 			$email = self::most_common( $mails );
 		}
 		if ( $email && is_email( $email ) && $email !== $s['email'] ) {
-			self::add( $f, $g, __( 'Email', 'comms-church-home-screen' ), $email, array( 'set' => array( 'email' => $email ) ), self::was( $s['email'] ) );
+			self::add( $f, $g, __( 'Email', 'comms-church-links' ), $email, array( 'set' => array( 'email' => $email ) ), self::was( $s['email'] ) );
 		}
 
 		// Address.
@@ -515,10 +520,10 @@ class CHS_Scanner {
 			}
 		}
 		if ( $street && $street !== $s['address'] ) {
-			self::add( $f, $g, __( 'Address', 'comms-church-home-screen' ), $street, array( 'set' => array( 'address' => $street ) ), self::was( $s['address'] ) );
+			self::add( $f, $g, __( 'Address', 'comms-church-links' ), $street, array( 'set' => array( 'address' => $street ) ), self::was( $s['address'] ) );
 		}
 		if ( $town && $town !== $s['location'] ) {
-			self::add( $f, $g, __( 'Town and state', 'comms-church-home-screen' ), $town, array( 'set' => array( 'location' => $town ) ), self::was( $s['location'] ) );
+			self::add( $f, $g, __( 'Town and state', 'comms-church-links' ), $town, array( 'set' => array( 'location' => $town ) ), self::was( $s['location'] ) );
 		}
 	}
 
@@ -530,7 +535,7 @@ class CHS_Scanner {
 	 */
 	private static function was( $current ) {
 		/* translators: %s: current value */
-		return $current ? sprintf( __( 'Replaces: %s', 'comms-church-home-screen' ), $current ) : '';
+		return $current ? sprintf( __( 'Replaces: %s', 'comms-church-links' ), $current ) : '';
 	}
 
 	/**
@@ -560,7 +565,7 @@ class CHS_Scanner {
 		$days  = array( 'sunday' => 0, 'monday' => 1, 'tuesday' => 2, 'wednesday' => 3, 'thursday' => 4, 'friday' => 5, 'saturday' => 6 );
 		$dayre = '\b(sunday|monday|tuesday|wednesday|thursday|friday|saturday)s?\b';
 		$found   = array();
-		$worship = __( 'Worship', 'comms-church-home-screen' );
+		$worship = __( 'Worship', 'comms-church-links' );
 
 		foreach ( $texts as $t ) {
 			$text = preg_replace( '/\b([ap])\.\s?m\.?/i', '$1m', $t['text'] );
@@ -649,7 +654,7 @@ class CHS_Scanner {
 				$weekdays[ $svc['day'] ] . ' · ' . $svc['label'],
 				$svc['time'],
 				array( 'service' => array( 'day' => $svc['day'], 'time' => $svc['time'], 'label' => $svc['label'] ) ),
-				$svc['score'] > 1 ? __( 'Found in more than one place', 'comms-church-home-screen' ) : __( 'Found once. Please double-check.', 'comms-church-home-screen' ),
+				$svc['score'] > 1 ? __( 'Found in more than one place', 'comms-church-links' ) : __( 'Found once. Please double-check.', 'comms-church-links' ),
 				$main
 			);
 			++$n;
@@ -720,12 +725,12 @@ class CHS_Scanner {
 	 */
 	private static function service_label( $context, $day, $fallback = null ) {
 		$map = array(
-			'/sunday\s+school/i'        => __( 'Sunday School', 'comms-church-home-screen' ),
-			'/bible study/i'             => __( 'Bible Study', 'comms-church-home-screen' ),
-			'/prayer/i'                  => __( 'Prayer', 'comms-church-home-screen' ),
-			'/youth|student/i'           => __( 'Youth', 'comms-church-home-screen' ),
-			'/\bmass\b/i'                => __( 'Mass', 'comms-church-home-screen' ),
-			'/worship|service|gathering|celebration/i' => __( 'Worship', 'comms-church-home-screen' ),
+			'/sunday\s+school/i'        => __( 'Sunday School', 'comms-church-links' ),
+			'/bible study/i'             => __( 'Bible Study', 'comms-church-links' ),
+			'/prayer/i'                  => __( 'Prayer', 'comms-church-links' ),
+			'/youth|student/i'           => __( 'Youth', 'comms-church-links' ),
+			'/\bmass\b/i'                => __( 'Mass', 'comms-church-links' ),
+			'/worship|service|gathering|celebration/i' => __( 'Worship', 'comms-church-links' ),
 		);
 		foreach ( $map as $re => $label ) {
 			if ( preg_match( $re, $context ) ) {
@@ -735,7 +740,7 @@ class CHS_Scanner {
 		if ( null !== $fallback ) {
 			return $fallback;
 		}
-		return in_array( $day, array( 0, 6 ), true ) ? __( 'Worship', 'comms-church-home-screen' ) : __( 'Gathering', 'comms-church-home-screen' );
+		return in_array( $day, array( 0, 6 ), true ) ? __( 'Worship', 'comms-church-links' ) : __( 'Gathering', 'comms-church-links' );
 	}
 
 	/**
@@ -772,10 +777,10 @@ class CHS_Scanner {
 			self::add(
 				$f,
 				'cc',
-				__( 'Church Center address', 'comms-church-home-screen' ),
+				__( 'Church Center address', 'comms-church-links' ),
 				$sub . '.churchcenter.com',
 				array( 'set' => array( 'cc_subdomain' => $sub ) ),
-				__( 'Turns on the Give, Groups, Sign Ups and Get the App apps.', 'comms-church-home-screen' )
+				__( 'Turns on the Give, Groups, Sign Ups and Get the App apps.', 'comms-church-links' )
 			);
 		}
 		$base = $sub ? 'https://' . $sub . '.churchcenter.com' : CHS_Settings::cc_base( $s );
@@ -784,7 +789,7 @@ class CHS_Scanner {
 		if ( ! $s['visit_url'] ) {
 			foreach ( $links as $l ) {
 				if ( CHS_Frontend::is_cc( $l['href'] ) && preg_match( '/plan|visit|new here|first time|connect card/i', $l['text'] . ' ' . $l['href'] ) ) {
-					self::add( $f, 'cc', __( 'Plan-a-visit form', 'comms-church-home-screen' ), $l['href'], array( 'set' => array( 'visit_url' => esc_url_raw( $l['href'] ) ) ), $l['text'] );
+					self::add( $f, 'cc', __( 'Plan-a-visit form', 'comms-church-links' ), $l['href'], array( 'set' => array( 'visit_url' => esc_url_raw( $l['href'] ) ) ), $l['text'] );
 					break;
 				}
 			}
@@ -805,17 +810,17 @@ class CHS_Scanner {
 		$cred = CHS_Events::pco_credentials( $s );
 		if ( $cred ) {
 			/* translators: %s: plugin name */
-			self::add( $f, 'events', __( 'Event list', 'comms-church-home-screen' ), __( 'Planning Center: the events you show in Church Center', 'comms-church-home-screen' ), array( 'set' => array( 'events_source' => 'pco' ) ), sprintf( __( 'Uses the Planning Center connection from %s.', 'comms-church-home-screen' ), $cred['from'] ? $cred['from'] : __( 'these settings', 'comms-church-home-screen' ) ) );
+			self::add( $f, 'events', __( 'Event list', 'comms-church-links' ), __( 'Planning Center: the events you show in Church Center', 'comms-church-links' ), array( 'set' => array( 'events_source' => 'pco' ) ), sprintf( __( 'Uses the Planning Center connection from %s.', 'comms-church-links' ), $cred['from'] ? $cred['from'] : __( 'these settings', 'comms-church-links' ) ) );
 			return;
 		}
 		if ( function_exists( 'tribe_get_events' ) ) {
-			self::add( $f, 'events', __( 'Event list', 'comms-church-home-screen' ), __( 'The Events Calendar on this site', 'comms-church-home-screen' ), array( 'set' => array( 'events_source' => 'tec' ) ), __( 'Shows upcoming events in the Events app and on the lock screen.', 'comms-church-home-screen' ) );
+			self::add( $f, 'events', __( 'Event list', 'comms-church-links' ), __( 'The Events Calendar on this site', 'comms-church-links' ), array( 'set' => array( 'events_source' => 'tec' ) ), __( 'Shows upcoming events in the Events app and on the lock screen.', 'comms-church-links' ) );
 			return;
 		}
 		foreach ( $links as $l ) {
 			if ( preg_match( '#^webcals?://#i', $l['href'] ) || preg_match( '#\.ics(\?|$)#i', $l['href'] ) || false !== stripos( $l['href'], 'calendar/ical' ) ) {
 				$url = preg_replace( '#^webcals?://#i', 'https://', $l['href'] );
-				self::add( $f, 'events', __( 'Calendar feed', 'comms-church-home-screen' ), $url, array( 'set' => array( 'events_source' => 'ics', 'ics_url' => esc_url_raw( $url ) ) ), __( 'Shows upcoming events in the Events app and on the lock screen.', 'comms-church-home-screen' ) );
+				self::add( $f, 'events', __( 'Calendar feed', 'comms-church-links' ), $url, array( 'set' => array( 'events_source' => 'ics', 'ics_url' => esc_url_raw( $url ) ) ), __( 'Shows upcoming events in the Events app and on the lock screen.', 'comms-church-links' ) );
 				return;
 			}
 		}
@@ -830,19 +835,23 @@ class CHS_Scanner {
 		$g     = 'apps';
 		$added = array();
 
-		$offer = function ( $label, $icon, $color, $url, $note, $checked ) use ( &$f, &$added, $g, $s ) {
+		// $type 'watch' makes a watched page: the app follows the newest item on it.
+		$offer = function ( $label, $icon, $color, $url, $note, $checked, $type = 'link' ) use ( &$f, &$added, $g, $s ) {
 			$key = strtolower( $label );
 			if ( isset( $added[ $key ] ) || ! $url ) {
 				return;
 			}
-			$app = array( 'type' => 'link', 'label' => $label, 'icon' => $icon, 'color' => $color, 'url' => esc_url_raw( $url ), 'place' => 'grid' );
+			if ( 'watch' === $type ) {
+				$note .= ' ' . __( 'Watched: always links to the newest item on that page.', 'comms-church-links' );
+			}
+			$app = array( 'type' => $type, 'label' => $label, 'icon' => $icon, 'color' => $color, 'url' => esc_url_raw( $url ), 'match' => '', 'place' => 'grid' );
 			if ( self::has_app( $s['apps'], $app ) ) {
 				// Fill in an existing placeholder app (like "Watch" with no link) instead of adding a new one.
 				foreach ( $s['apps'] as $a ) {
 					if ( 'link' === $a['type'] && '' === $a['url'] && strtolower( $a['label'] ) === $key ) {
 						$added[ $key ] = true;
 						/* translators: %s: app name */
-						self::add( $f, $g, $label, $url, array( 'fill' => $key ), sprintf( __( 'Adds the link to your existing %s app.', 'comms-church-home-screen' ), $label ) . ' ' . $note, $checked );
+						self::add( $f, $g, $label, $url, array( 'fill' => $key, 'fill_type' => $type ), sprintf( __( 'Adds the link to your existing %s app.', 'comms-church-links' ), $label ) . ' ' . $note, $checked );
 						return;
 					}
 				}
@@ -860,8 +869,8 @@ class CHS_Scanner {
 			'youtu.be'           => array( 'YouTube', 'play', '#d9483b' ),
 			'vimeo.com'          => array( 'Vimeo', 'play', '#1ab7ea' ),
 			'tiktok.com'         => array( 'TikTok', 'music', '#111827' ),
-			'podcasts.apple.com' => array( __( 'Podcast', 'comms-church-home-screen' ), 'mic', '#8e4fd6' ),
-			'open.spotify.com'   => array( __( 'Podcast', 'comms-church-home-screen' ), 'mic', '#1db954' ),
+			'podcasts.apple.com' => array( __( 'Podcast', 'comms-church-links' ), 'mic', '#8e4fd6' ),
+			'open.spotify.com'   => array( __( 'Podcast', 'comms-church-links' ), 'mic', '#1db954' ),
 			'x.com'              => array( 'X', 'chat', '#111827' ),
 			'twitter.com'        => array( 'X', 'chat', '#111827' ),
 		);
@@ -877,37 +886,37 @@ class CHS_Scanner {
 			$path = trim( (string) wp_parse_url( $href, PHP_URL_PATH ), '/' );
 			if ( isset( $social[ $host ] ) && '' !== $path && ! preg_match( '#^(watch|embed|p|reel|status)/#', $path ) ) {
 				list( $label, $icon, $color ) = $social[ $host ];
-				$offer( $label, $icon, $color, $href, __( 'Linked on your site', 'comms-church-home-screen' ), in_array( $label, array( 'Instagram', 'Facebook', 'YouTube' ), true ) );
+				$offer( $label, $icon, $color, $href, __( 'Linked on your site', 'comms-church-links' ), in_array( $label, array( 'Instagram', 'Facebook', 'YouTube' ), true ) );
 			}
 		}
 
 		// Key pages, from menus first (the church curated those), then all pages.
 		$rules = array(
 			array( '/plan.{0,12}visit|new here|i.?m new|first.time|visit us/i', 'visit', '', '', '' ),
-			array( '/\b(watch|live|livestream|live stream|stream|watch live)\b/i', __( 'Watch', 'comms-church-home-screen' ), 'play', '#d9483b', '' ),
-			array( '/sermon|message|teaching|podcast/i', __( 'Sermons', 'comms-church-home-screen' ), 'book', '#2c3372', '' ),
-			array( '/\bkids?\b|children/i', __( 'Kids', 'comms-church-home-screen' ), 'star', '#7fb23a', '' ),
-			array( '/student|youth/i', __( 'Students', 'comms-church-home-screen' ), 'people', '#e0712c', '' ),
-			array( '/prayer/i', __( 'Prayer', 'comms-church-home-screen' ), 'flame', '#7d5bc4', '' ),
-			array( '/serve|volunteer/i', __( 'Serve', 'comms-church-home-screen' ), 'heart', '#d6546e', '' ),
-			array( '/^(give|giving|donate|online giving)$/i', __( 'Give', 'comms-church-home-screen' ), 'heart', '#e08a2c', 'nocc' ),
-			array( '/^(groups|small groups|life groups|community groups)$/i', __( 'Groups', 'comms-church-home-screen' ), 'people', '#3b82d6', 'nocc' ),
-			array( '/belief|about us|who we are|our story/i', __( 'About', 'comms-church-home-screen' ), 'info', '#64748b', 'off' ),
-			array( '/bulletin|newsletter/i', __( 'Bulletin', 'comms-church-home-screen' ), 'document', '#5b6474', 'off' ),
+			array( '/\b(watch|live|livestream|live stream|stream|watch live)\b/i', __( 'Watch', 'comms-church-links' ), 'play', '#d9483b', '' ),
+			array( '/sermon|message|teaching|podcast/i', __( 'Sermons', 'comms-church-links' ), 'book', '#2c3372', '' ),
+			array( '/\bkids?\b|children/i', __( 'Kids', 'comms-church-links' ), 'star', '#7fb23a', '' ),
+			array( '/student|youth/i', __( 'Students', 'comms-church-links' ), 'people', '#e0712c', '' ),
+			array( '/prayer/i', __( 'Prayer', 'comms-church-links' ), 'flame', '#7d5bc4', '' ),
+			array( '/serve|volunteer/i', __( 'Serve', 'comms-church-links' ), 'heart', '#d6546e', '' ),
+			array( '/^(give|giving|donate|online giving)$/i', __( 'Give', 'comms-church-links' ), 'heart', '#e08a2c', 'nocc' ),
+			array( '/^(groups|small groups|life groups|community groups)$/i', __( 'Groups', 'comms-church-links' ), 'people', '#3b82d6', 'nocc' ),
+			array( '/belief|about us|who we are|our story/i', __( 'About', 'comms-church-links' ), 'info', '#64748b', 'off' ),
+			array( '/bulletin|newsletter/i', __( 'Bulletin', 'comms-church-links' ), 'document', '#5b6474', 'watch' ),
 		);
 
 		$cands = array();
 		foreach ( wp_get_nav_menus() as $menu ) {
 			foreach ( (array) wp_get_nav_menu_items( $menu->term_id ) as $item ) {
-				$cands[] = array( 'title' => wp_strip_all_tags( $item->title ), 'url' => $item->url, 'src' => __( 'In your menu', 'comms-church-home-screen' ) );
+				$cands[] = array( 'title' => wp_strip_all_tags( $item->title ), 'url' => $item->url, 'src' => __( 'In your menu', 'comms-church-links' ) );
 			}
 		}
 		foreach ( get_pages( array( 'post_status' => 'publish', 'number' => 200 ) ) as $p ) {
-			$cands[] = array( 'title' => $p->post_title, 'url' => get_permalink( $p ), 'src' => __( 'A page on your site', 'comms-church-home-screen' ) );
+			$cands[] = array( 'title' => $p->post_title, 'url' => get_permalink( $p ), 'src' => __( 'A page on your site', 'comms-church-links' ) );
 		}
 		foreach ( $links as $l ) {
 			if ( $l['text'] && strlen( $l['text'] ) < 30 ) {
-				$cands[] = array( 'title' => $l['text'], 'url' => $l['href'], 'src' => __( 'Linked on your site', 'comms-church-home-screen' ) );
+				$cands[] = array( 'title' => $l['text'], 'url' => $l['href'], 'src' => __( 'Linked on your site', 'comms-church-links' ) );
 			}
 		}
 
@@ -932,14 +941,16 @@ class CHS_Scanner {
 				if ( 'visit' === $r[1] ) {
 					if ( ! $visit_done ) {
 						$visit_done = true;
-						self::add( $f, 'details', __( 'Plan-a-visit link', 'comms-church-home-screen' ), $url, array( 'set' => array( 'visit_url' => esc_url_raw( $url ) ) ), $c['src'] . ': ' . $c['title'] );
+						self::add( $f, 'details', __( 'Plan-a-visit link', 'comms-church-links' ), $url, array( 'set' => array( 'visit_url' => esc_url_raw( $url ) ) ), $c['src'] . ': ' . $c['title'] );
 					}
 					break;
 				}
 				if ( 'nocc' === $r[4] && $cc ) {
 					break; // Church Center already covers this.
 				}
-				$offer( $r[1], $r[2], $r[3], $url, $c['src'] . ': ' . $c['title'], 'off' !== $r[4] );
+				// Bulletins, and any archive of posts (a sermon or news archive), are watched.
+				$type = 'watch' === $r[4] || CHS_Watch::post_type_for( $url ) ? 'watch' : 'link';
+				$offer( $r[1], $r[2], $r[3], $url, $c['src'] . ': ' . $c['title'], 'off' !== $r[4], $type );
 				break;
 			}
 		}
@@ -947,7 +958,7 @@ class CHS_Scanner {
 		// Sermon archives from sermon plugins.
 		foreach ( get_post_types( array( 'public' => true, 'has_archive' => true ), 'objects' ) as $pt ) {
 			if ( preg_match( '/sermon|message/i', $pt->name . ' ' . $pt->label ) ) {
-				$offer( __( 'Sermons', 'comms-church-home-screen' ), 'book', '#2c3372', get_post_type_archive_link( $pt->name ), __( 'Sermon archive on your site', 'comms-church-home-screen' ), true );
+				$offer( __( 'Sermons', 'comms-church-links' ), 'book', '#2c3372', get_post_type_archive_link( $pt->name ), __( 'Sermon archive on your site.', 'comms-church-links' ), true, 'watch' );
 			}
 		}
 	}
@@ -1019,11 +1030,11 @@ class CHS_Scanner {
 			}
 		}
 		if ( $best && strtolower( $best ) !== strtolower( $s['brand'] ) ) {
-			self::add( $f, 'look', __( 'Brand color', 'comms-church-home-screen' ), $best, array( 'set' => array( 'brand' => $best ), 'swatch' => $best ), __( "From your theme's colors", 'comms-church-home-screen' ) );
+			self::add( $f, 'look', __( 'Brand color', 'comms-church-links' ), $best, array( 'set' => array( 'brand' => $best ), 'swatch' => $best ), __( "From your theme's colors", 'comms-church-links' ) );
 		}
 
 		if ( ! get_site_icon_url() ) {
-			self::add( $f, 'look', __( 'Site icon', 'comms-church-home-screen' ), __( 'Not set', 'comms-church-home-screen' ), array( 'tip' => true ), __( 'Set one under Appearance → Customize → Site Identity (or Settings → General) so the home screen gets an app icon.', 'comms-church-home-screen' ), false );
+			self::add( $f, 'look', __( 'Site icon', 'comms-church-links' ), __( 'Not set', 'comms-church-links' ), array( 'tip' => true ), __( 'Set one under Appearance → Customize → Site Identity (or Settings → General) so your links page gets an icon.', 'comms-church-links' ), false );
 		}
 	}
 

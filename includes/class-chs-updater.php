@@ -5,7 +5,7 @@
  * No third-party service involved: it calls the public GitHub Releases API
  * directly, so the repo must stay public.
  *
- * @package ChurchHomeScreen
+ * @package ChurchLinks
  */
 
 defined( 'ABSPATH' ) || exit;
@@ -15,16 +15,16 @@ defined( 'ABSPATH' ) || exit;
  */
 class CHS_Updater {
 
-	const GITHUB_REPO = 'Comms-Church/comms-church-home-screen';
+	const GITHUB_REPO = 'Comms-Church/comms-church-links';
 	// Deliberately not prefixed 'chs_' so cache flushes of plugin data never
 	// touch the release cache.
 	const CACHE_KEY = 'chsupd_release';
 	const CACHE_TTL = DAY_IN_SECONDS;
 
-	/** @var string e.g. comms-church-home-screen/comms-church-home-screen.php */
+	/** @var string e.g. comms-church-links/comms-church-links.php */
 	private $plugin_file;
 
-	/** @var string e.g. comms-church-home-screen */
+	/** @var string e.g. comms-church-links */
 	private $plugin_slug;
 
 	/** @var string Currently installed version. */
@@ -118,7 +118,7 @@ class CHS_Updater {
 
 		$body                = isset( $release['body'] ) ? $release['body'] : '';
 		$info                = new stdClass();
-		$info->name          = 'Church Home Screen';
+		$info->name          = 'Church Links';
 		$info->slug          = $this->plugin_slug;
 		$info->version       = $this->normalize_version( $release['tag_name'] );
 		$info->author        = '<a href="https://comms.church">Comms.Church</a>';
@@ -179,7 +179,7 @@ class CHS_Updater {
 			add_query_arg( array( 'chs_check_update' => 1 ), admin_url( 'plugins.php' ) ),
 			'chs_check_update'
 		);
-		$links[] = '<a href="' . esc_url( $url ) . '">' . esc_html__( 'Check for updates', 'comms-church-home-screen' ) . '</a>';
+		$links[] = '<a href="' . esc_url( $url ) . '">' . esc_html__( 'Check for updates', 'comms-church-links' ) . '</a>';
 		return $links;
 	}
 

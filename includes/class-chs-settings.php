@@ -2,7 +2,7 @@
 /**
  * Settings: defaults, sanitizing and the admin page.
  *
- * @package ChurchHomeScreen
+ * @package ChurchLinks
  */
 
 defined( 'ABSPATH' ) || exit;
@@ -14,7 +14,7 @@ class CHS_Settings {
 
 	const OPTION = 'chs_settings';
 	const GROUP  = 'chs_settings_group';
-	const PAGE   = 'church-home-screen';
+	const PAGE   = 'church-links';
 
 	/**
 	 * Hooks.
@@ -39,32 +39,34 @@ class CHS_Settings {
 		}
 		printf(
 			'<div class="notice notice-info"><p><strong>%1$s</strong> %2$s <a href="%3$s">%4$s</a></p></div>',
-			esc_html__( 'Church Home Screen is active.', 'comms-church-home-screen' ),
-			esc_html__( 'We can fill in most of the setup from your website.', 'comms-church-home-screen' ),
+			esc_html__( 'Church Links is active.', 'comms-church-links' ),
+			esc_html__( 'We can fill in most of the setup from your website.', 'comms-church-links' ),
 			esc_url( admin_url( 'options-general.php?page=' . self::PAGE ) ),
-			esc_html__( 'Set up your home screen', 'comms-church-home-screen' )
+			esc_html__( 'Set up your links page', 'comms-church-links' )
 		);
 	}
 
 	/**
 	 * App types the church can add. "kind" decides how the app behaves:
-	 * sheet = opens a panel on the screen, cc = Church Center link, link = plain link, app = Church Center app download.
+	 * sheet = opens a panel on the screen, cc = Church Center link, link = plain link, app = Church Center app download,
+	 * watch = follows a page and links to the newest item on it (see CHS_Watch).
 	 *
 	 * @return array
 	 */
 	public static function app_types() {
 		return array(
-			'visit'            => array( 'name' => __( 'Plan a Visit (service times panel)', 'comms-church-home-screen' ), 'label' => __( 'Visit', 'comms-church-home-screen' ), 'icon' => 'pin', 'color' => '#1f8a7d', 'kind' => 'sheet' ),
-			'events'           => array( 'name' => __( 'Events (upcoming events panel)', 'comms-church-home-screen' ), 'label' => __( 'Events', 'comms-church-home-screen' ), 'icon' => 'today', 'color' => '#ffffff', 'kind' => 'sheet' ),
-			'contact'          => array( 'name' => __( 'Contact (phone & email panel)', 'comms-church-home-screen' ), 'label' => __( 'Contact', 'comms-church-home-screen' ), 'icon' => 'phone', 'color' => '#2e9e52', 'kind' => 'sheet' ),
-			'directions'       => array( 'name' => __( 'Directions (opens maps)', 'comms-church-home-screen' ), 'label' => __( 'Directions', 'comms-church-home-screen' ), 'icon' => 'navigate', 'color' => '#3d5fe0', 'kind' => 'link' ),
-			'cc_giving'        => array( 'name' => __( 'Church Center: Giving', 'comms-church-home-screen' ), 'label' => __( 'Give', 'comms-church-home-screen' ), 'icon' => 'heart', 'color' => '#e08a2c', 'kind' => 'cc', 'path' => '/giving' ),
-			'cc_groups'        => array( 'name' => __( 'Church Center: Groups', 'comms-church-home-screen' ), 'label' => __( 'Groups', 'comms-church-home-screen' ), 'icon' => 'people', 'color' => '#3b82d6', 'kind' => 'cc', 'path' => '/groups' ),
-			'cc_registrations' => array( 'name' => __( 'Church Center: Sign-ups', 'comms-church-home-screen' ), 'label' => __( 'Sign Ups', 'comms-church-home-screen' ), 'icon' => 'check', 'color' => '#8a5cd0', 'kind' => 'cc', 'path' => '/registrations' ),
-			'cc_calendar'      => array( 'name' => __( 'Church Center: Calendar', 'comms-church-home-screen' ), 'label' => __( 'Calendar', 'comms-church-home-screen' ), 'icon' => 'today', 'color' => '#ffffff', 'kind' => 'cc', 'path' => '/calendar' ),
-			'cc_home'          => array( 'name' => __( 'Church Center: Home', 'comms-church-home-screen' ), 'label' => __( 'Church Center', 'comms-church-home-screen' ), 'icon' => 'church', 'color' => '#2c3372', 'kind' => 'cc', 'path' => '' ),
-			'cc_app'           => array( 'name' => __( 'Church Center: Get the app', 'comms-church-home-screen' ), 'label' => __( 'Get the App', 'comms-church-home-screen' ), 'icon' => 'download', 'color' => '#1c1e33', 'kind' => 'app' ),
-			'link'             => array( 'name' => __( 'Custom link', 'comms-church-home-screen' ), 'label' => __( 'Link', 'comms-church-home-screen' ), 'icon' => 'link', 'color' => '#64748b', 'kind' => 'link' ),
+			'visit'            => array( 'name' => __( 'Plan a Visit (service times panel)', 'comms-church-links' ), 'label' => __( 'Visit', 'comms-church-links' ), 'icon' => 'pin', 'color' => '#1f8a7d', 'kind' => 'sheet' ),
+			'events'           => array( 'name' => __( 'Events (upcoming events panel)', 'comms-church-links' ), 'label' => __( 'Events', 'comms-church-links' ), 'icon' => 'today', 'color' => '#ffffff', 'kind' => 'sheet' ),
+			'contact'          => array( 'name' => __( 'Contact (phone & email panel)', 'comms-church-links' ), 'label' => __( 'Contact', 'comms-church-links' ), 'icon' => 'phone', 'color' => '#2e9e52', 'kind' => 'sheet' ),
+			'directions'       => array( 'name' => __( 'Directions (opens maps)', 'comms-church-links' ), 'label' => __( 'Directions', 'comms-church-links' ), 'icon' => 'navigate', 'color' => '#3d5fe0', 'kind' => 'link' ),
+			'cc_giving'        => array( 'name' => __( 'Church Center: Giving', 'comms-church-links' ), 'label' => __( 'Give', 'comms-church-links' ), 'icon' => 'heart', 'color' => '#e08a2c', 'kind' => 'cc', 'path' => '/giving' ),
+			'cc_groups'        => array( 'name' => __( 'Church Center: Groups', 'comms-church-links' ), 'label' => __( 'Groups', 'comms-church-links' ), 'icon' => 'people', 'color' => '#3b82d6', 'kind' => 'cc', 'path' => '/groups' ),
+			'cc_registrations' => array( 'name' => __( 'Church Center: Sign-ups', 'comms-church-links' ), 'label' => __( 'Sign Ups', 'comms-church-links' ), 'icon' => 'check', 'color' => '#8a5cd0', 'kind' => 'cc', 'path' => '/registrations' ),
+			'cc_calendar'      => array( 'name' => __( 'Church Center: Calendar', 'comms-church-links' ), 'label' => __( 'Calendar', 'comms-church-links' ), 'icon' => 'today', 'color' => '#ffffff', 'kind' => 'cc', 'path' => '/calendar' ),
+			'cc_home'          => array( 'name' => __( 'Church Center: Home', 'comms-church-links' ), 'label' => __( 'Church Center', 'comms-church-links' ), 'icon' => 'church', 'color' => '#2c3372', 'kind' => 'cc', 'path' => '' ),
+			'cc_app'           => array( 'name' => __( 'Church Center: Get the app', 'comms-church-links' ), 'label' => __( 'Get the App', 'comms-church-links' ), 'icon' => 'download', 'color' => '#1c1e33', 'kind' => 'app' ),
+			'link'             => array( 'name' => __( 'Custom link', 'comms-church-links' ), 'label' => __( 'Link', 'comms-church-links' ), 'icon' => 'link', 'color' => '#64748b', 'kind' => 'link' ),
+			'watch'            => array( 'name' => __( 'Watched page (always links to the newest item on it)', 'comms-church-links' ), 'label' => __( 'Bulletin', 'comms-church-links' ), 'icon' => 'document', 'color' => '#5b6474', 'kind' => 'watch' ),
 		);
 	}
 
@@ -94,11 +96,12 @@ class CHS_Settings {
 				'icon'  => $t['icon'],
 				'color' => $t['color'],
 				'url'   => '',
+				'match' => '',
 				'place' => $r[1],
 			);
 		}
-		$apps[] = array( 'type' => 'link', 'label' => __( 'Watch', 'comms-church-home-screen' ), 'icon' => 'play', 'color' => '#d9483b', 'url' => '', 'place' => 'dock' );
-		$apps[] = array( 'type' => 'link', 'label' => __( 'Sermons', 'comms-church-home-screen' ), 'icon' => 'book', 'color' => '#2c3372', 'url' => '', 'place' => 'grid' );
+		$apps[] = array( 'type' => 'link', 'label' => __( 'Watch', 'comms-church-links' ), 'icon' => 'play', 'color' => '#d9483b', 'url' => '', 'match' => '', 'place' => 'dock' );
+		$apps[] = array( 'type' => 'link', 'label' => __( 'Sermons', 'comms-church-links' ), 'icon' => 'book', 'color' => '#2c3372', 'url' => '', 'match' => '', 'place' => 'grid' );
 		return $apps;
 	}
 
@@ -110,6 +113,7 @@ class CHS_Settings {
 	public static function defaults() {
 		return array(
 			'path'            => 'links',
+			'display'         => 'list',
 			'church_name'     => get_bloginfo( 'name' ),
 			'short_name'      => '',
 			'location'        => '',
@@ -117,11 +121,11 @@ class CHS_Settings {
 			'phone'           => '',
 			'email'           => '',
 			'services'        => array(
-				array( 'day' => 0, 'time' => '10:00 AM', 'label' => __( 'Worship', 'comms-church-home-screen' ) ),
+				array( 'day' => 0, 'time' => '10:00 AM', 'label' => __( 'Worship', 'comms-church-links' ) ),
 			),
-			'expect'          => __( "Come as you are.\nWorship runs about an hour, with singing, prayer and teaching from the Bible.\nKids programs run during the service.", 'comms-church-home-screen' ),
+			'expect'          => __( "Come as you are.\nWorship runs about an hour, with singing, prayer and teaching from the Bible.\nKids programs run during the service.", 'comms-church-links' ),
 			'visit_url'       => '',
-			'note_body'       => __( 'Come as you are. We would love to meet you.', 'comms-church-home-screen' ),
+			'note_body'       => __( 'Come as you are. We would love to meet you.', 'comms-church-links' ),
 			'verse_on'        => 1,
 			'verse_text'      => 'Come to me, all you who labor and are heavily burdened, and I will give you rest.',
 			'verse_ref'       => 'Matthew 11:28 (WEB)',
@@ -154,6 +158,9 @@ class CHS_Settings {
 		if ( ! is_array( $s['apps'] ) ) {
 			$s['apps'] = array();
 		}
+		foreach ( $s['apps'] as $i => $a ) {
+			$s['apps'][ $i ] = wp_parse_args( (array) $a, array( 'type' => 'link', 'label' => '', 'icon' => 'link', 'color' => '#64748b', 'url' => '', 'match' => '', 'place' => 'grid' ) );
+		}
 		return $s;
 	}
 
@@ -172,8 +179,8 @@ class CHS_Settings {
 	 */
 	public static function menu() {
 		add_options_page(
-			__( 'Church Home Screen', 'comms-church-home-screen' ),
-			__( 'Home Screen', 'comms-church-home-screen' ),
+			__( 'Church Links', 'comms-church-links' ),
+			__( 'Church Links', 'comms-church-links' ),
 			'manage_options',
 			self::PAGE,
 			array( __CLASS__, 'render_page' )
@@ -206,7 +213,8 @@ class CHS_Settings {
 		}
 		wp_enqueue_media();
 		wp_enqueue_style( 'chs-admin', CHS_URL . 'assets/admin.css', array(), CHS_VERSION );
-		wp_enqueue_script( 'chs-admin', CHS_URL . 'assets/admin.js', array( 'jquery', 'jquery-ui-sortable' ), CHS_VERSION, true );
+		wp_enqueue_script( 'chs-qrcode', CHS_URL . 'assets/vendor/qrcode.js', array(), '1.4.4', true );
+		wp_enqueue_script( 'chs-admin', CHS_URL . 'assets/admin.js', array( 'jquery', 'jquery-ui-sortable', 'chs-qrcode' ), CHS_VERSION, true );
 		$types = array();
 		foreach ( self::app_types() as $key => $t ) {
 			$types[ $key ] = array(
@@ -221,8 +229,9 @@ class CHS_Settings {
 			'CHSAdmin',
 			array(
 				'types'      => $types,
-				'chooseText' => __( 'Choose wallpaper', 'comms-church-home-screen' ),
-				'useText'    => __( 'Use this photo', 'comms-church-home-screen' ),
+				'chooseText' => __( 'Choose wallpaper', 'comms-church-links' ),
+				'useText'    => __( 'Use this photo', 'comms-church-links' ),
+				'qrName'     => sanitize_file_name( get_bloginfo( 'name' ) . '-links-qr' ),
 			)
 		);
 	}
@@ -269,6 +278,7 @@ class CHS_Settings {
 			}
 		}
 
+		$out['display']  = isset( $in['display'] ) && 'phone' === $in['display'] ? 'phone' : 'list';
 		$out['verse_on'] = empty( $in['verse_on'] ) ? 0 : 1;
 		$out['steeple']  = empty( $in['steeple'] ) ? 0 : 1;
 		$out['cc_modal'] = empty( $in['cc_modal'] ) ? 0 : 1;
@@ -327,12 +337,15 @@ class CHS_Settings {
 					'icon'  => $icon,
 					'color' => $color ? $color : $t['color'],
 					'url'   => isset( $row['url'] ) ? esc_url_raw( trim( $row['url'] ) ) : '',
+					'match' => isset( $row['match'] ) ? mb_substr( sanitize_text_field( $row['match'] ), 0, 40 ) : '',
 					'place' => $place,
 				);
 			}
 		}
 
 		delete_transient( CHS_Events::CACHE );
+		// Read watched pages now, so the links page is right the moment settings are saved.
+		CHS_Watch::check_all( wp_parse_args( $out, self::defaults() ) );
 		if ( 'pco' === $out['events_source'] ) {
 			// Fetch now so the settings page can say right away whether the key works.
 			CHS_Events::get( wp_parse_args( $out, self::defaults() ) );
@@ -383,15 +396,20 @@ class CHS_Settings {
 		$applied = isset( $_GET['chs_applied'] ) ? absint( $_GET['chs_applied'] ) : null; // phpcs:ignore WordPress.Security.NonceVerification -- display only.
 		?>
 		<div class="wrap chs-admin">
-			<h1><?php esc_html_e( 'Church Home Screen', 'comms-church-home-screen' ); ?></h1>
+			<h1><?php esc_html_e( 'Church Links', 'comms-church-links' ); ?></h1>
 
 			<div class="chs-hero">
 				<div>
-					<p class="chs-eyebrow"><?php esc_html_e( 'Your home screen is live at', 'comms-church-home-screen' ); ?></p>
+					<p class="chs-eyebrow"><?php esc_html_e( 'Your links page is live at', 'comms-church-links' ); ?></p>
 					<p class="chs-url"><a href="<?php echo esc_url( $url ); ?>" target="_blank" rel="noopener"><?php echo esc_html( $url ); ?></a></p>
-					<p class="description"><?php esc_html_e( 'Put this link in your Instagram and Facebook bios, on slides, and behind a QR code in the bulletin.', 'comms-church-home-screen' ); ?></p>
+					<p class="description"><?php esc_html_e( 'Put this link in your Instagram and Facebook bios, and the QR code on slides, in the bulletin and on signs.', 'comms-church-links' ); ?></p>
+					<p class="chs-hero-actions">
+						<a class="button button-primary" href="<?php echo esc_url( $url ); ?>" target="_blank" rel="noopener"><?php esc_html_e( 'Open links page', 'comms-church-links' ); ?></a>
+						<button type="button" class="button" data-qr-download="svg"><?php esc_html_e( 'Download QR (SVG)', 'comms-church-links' ); ?></button>
+						<button type="button" class="button" data-qr-download="png"><?php esc_html_e( 'Download QR (PNG)', 'comms-church-links' ); ?></button>
+					</p>
 				</div>
-				<a class="button button-primary button-hero" href="<?php echo esc_url( $url ); ?>" target="_blank" rel="noopener"><?php esc_html_e( 'Open home screen', 'comms-church-home-screen' ); ?></a>
+				<div class="chs-qr" id="chs-qr" data-url="<?php echo esc_url( $url ); ?>" role="img" aria-label="<?php esc_attr_e( 'QR code for your links page', 'comms-church-links' ); ?>"></div>
 			</div>
 
 			<?php if ( null !== $applied ) : ?>
@@ -400,8 +418,8 @@ class CHS_Settings {
 					echo esc_html(
 						$applied
 							/* translators: %d: number of settings */
-							? sprintf( _n( 'Filled in %d setting from your site. Look it over below.', 'Filled in %d settings from your site. Look them over below.', $applied, 'comms-church-home-screen' ), $applied )
-							: __( 'Nothing was selected, so nothing changed.', 'comms-church-home-screen' )
+							? sprintf( _n( 'Filled in %d setting from your site. Look it over below.', 'Filled in %d settings from your site. Look them over below.', $applied, 'comms-church-links' ), $applied )
+							: __( 'Nothing was selected, so nothing changed.', 'comms-church-links' )
 					);
 					?>
 				</p></div>
@@ -417,13 +435,13 @@ class CHS_Settings {
 
 			<section class="chs-card chs-scan">
 				<div>
-					<h2><?php esc_html_e( 'Auto-fill from your site', 'comms-church-home-screen' ); ?></h2>
-					<p class="description"><?php esc_html_e( 'Reads your homepage, menus and pages for service times, contact details, your Church Center address, social links and pages worth adding as apps. You choose what to keep.', 'comms-church-home-screen' ); ?></p>
+					<h2><?php esc_html_e( 'Auto-fill from your site', 'comms-church-links' ); ?></h2>
+					<p class="description"><?php esc_html_e( 'Reads your homepage, menus and pages for service times, contact details, your Church Center address, social links and pages worth adding as apps. You choose what to keep.', 'comms-church-links' ); ?></p>
 				</div>
 				<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
 					<input type="hidden" name="action" value="chs_scan">
 					<?php wp_nonce_field( 'chs_scan' ); ?>
-					<button type="submit" class="button button-secondary"><?php esc_html_e( 'Scan my site', 'comms-church-home-screen' ); ?></button>
+					<button type="submit" class="button button-secondary"><?php esc_html_e( 'Scan my site', 'comms-church-links' ); ?></button>
 				</form>
 			</section>
 
@@ -431,87 +449,87 @@ class CHS_Settings {
 				<?php settings_fields( self::GROUP ); ?>
 
 				<section class="chs-card">
-					<h2><?php esc_html_e( 'Church details', 'comms-church-home-screen' ); ?></h2>
+					<h2><?php esc_html_e( 'Church details', 'comms-church-links' ); ?></h2>
 					<div class="chs-grid">
 						<?php
-						self::text( 'church_name', __( 'Church name', 'comms-church-home-screen' ), $s );
-						self::text( 'short_name', __( 'Short name', 'comms-church-home-screen' ), $s, __( 'Shown on lock-screen notifications. Leave blank to use the church name.', 'comms-church-home-screen' ) );
-						self::text( 'location', __( 'Town and state', 'comms-church-home-screen' ), $s, __( 'For example: Willow Street, PA', 'comms-church-home-screen' ) );
-						self::text( 'address', __( 'Street address', 'comms-church-home-screen' ), $s, __( 'Used for the Directions app.', 'comms-church-home-screen' ) );
-						self::text( 'phone', __( 'Phone', 'comms-church-home-screen' ), $s );
-						self::text( 'email', __( 'Email', 'comms-church-home-screen' ), $s, '', 'email' );
+						self::text( 'church_name', __( 'Church name', 'comms-church-links' ), $s );
+						self::text( 'short_name', __( 'Short name', 'comms-church-links' ), $s, __( 'Shown on lock-screen notifications. Leave blank to use the church name.', 'comms-church-links' ) );
+						self::text( 'location', __( 'Town and state', 'comms-church-links' ), $s, __( 'For example: Willow Street, PA', 'comms-church-links' ) );
+						self::text( 'address', __( 'Street address', 'comms-church-links' ), $s, __( 'Used for the Directions app.', 'comms-church-links' ) );
+						self::text( 'phone', __( 'Phone', 'comms-church-links' ), $s );
+						self::text( 'email', __( 'Email', 'comms-church-links' ), $s, '', 'email' );
 						?>
 					</div>
 				</section>
 
 				<section class="chs-card">
-					<h2><?php esc_html_e( 'Services', 'comms-church-home-screen' ); ?></h2>
-					<p class="description"><?php esc_html_e( 'The lock screen and the service widget show whichever service comes next.', 'comms-church-home-screen' ); ?></p>
+					<h2><?php esc_html_e( 'Services', 'comms-church-links' ); ?></h2>
+					<p class="description"><?php esc_html_e( 'The lock screen and the service widget show whichever service comes next.', 'comms-church-links' ); ?></p>
 					<table class="chs-services">
-						<thead><tr><th><?php esc_html_e( 'Day', 'comms-church-home-screen' ); ?></th><th><?php esc_html_e( 'Time', 'comms-church-home-screen' ); ?></th><th><?php esc_html_e( 'Name', 'comms-church-home-screen' ); ?></th></tr></thead>
+						<thead><tr><th><?php esc_html_e( 'Day', 'comms-church-links' ); ?></th><th><?php esc_html_e( 'Time', 'comms-church-links' ); ?></th><th><?php esc_html_e( 'Name', 'comms-church-links' ); ?></th></tr></thead>
 						<tbody>
 						<?php
 						for ( $i = 0; $i < 4; $i++ ) :
 							$row = isset( $s['services'][ $i ] ) ? $s['services'][ $i ] : array( 'day' => 0, 'time' => '', 'label' => '' );
 							?>
 							<tr>
-								<td><select name="<?php echo esc_attr( "{$o}[services][$i][day]" ); ?>" aria-label="<?php esc_attr_e( 'Day', 'comms-church-home-screen' ); ?>">
+								<td><select name="<?php echo esc_attr( "{$o}[services][$i][day]" ); ?>" aria-label="<?php esc_attr_e( 'Day', 'comms-church-links' ); ?>">
 									<?php foreach ( $days as $n => $day ) : ?>
 										<option value="<?php echo esc_attr( $n ); ?>" <?php selected( (int) $row['day'], $n ); ?>><?php echo esc_html( $day ); ?></option>
 									<?php endforeach; ?>
 								</select></td>
-								<td><input type="text" name="<?php echo esc_attr( "{$o}[services][$i][time]" ); ?>" value="<?php echo esc_attr( $row['time'] ); ?>" placeholder="10:30 AM" aria-label="<?php esc_attr_e( 'Time', 'comms-church-home-screen' ); ?>"></td>
-								<td><input type="text" name="<?php echo esc_attr( "{$o}[services][$i][label]" ); ?>" value="<?php echo esc_attr( $row['label'] ); ?>" placeholder="<?php esc_attr_e( 'Worship', 'comms-church-home-screen' ); ?>" aria-label="<?php esc_attr_e( 'Name', 'comms-church-home-screen' ); ?>"></td>
+								<td><input type="text" name="<?php echo esc_attr( "{$o}[services][$i][time]" ); ?>" value="<?php echo esc_attr( $row['time'] ); ?>" placeholder="10:30 AM" aria-label="<?php esc_attr_e( 'Time', 'comms-church-links' ); ?>"></td>
+								<td><input type="text" name="<?php echo esc_attr( "{$o}[services][$i][label]" ); ?>" value="<?php echo esc_attr( $row['label'] ); ?>" placeholder="<?php esc_attr_e( 'Worship', 'comms-church-links' ); ?>" aria-label="<?php esc_attr_e( 'Name', 'comms-church-links' ); ?>"></td>
 							</tr>
 						<?php endfor; ?>
 						</tbody>
 					</table>
 					<div class="chs-grid">
 						<?php
-						self::textarea( 'expect', __( 'What to expect', 'comms-church-home-screen' ), $s, __( 'One point per line. Shown in the Visit app.', 'comms-church-home-screen' ) );
-						self::textarea( 'note_body', __( 'Lock-screen message', 'comms-church-home-screen' ), $s, __( 'Shown under the next service on the lock screen.', 'comms-church-home-screen' ) );
-						self::text( 'visit_url', __( 'Plan-a-visit form link (optional)', 'comms-church-home-screen' ), $s, __( 'A Church Center form works well here.', 'comms-church-home-screen' ), 'url' );
+						self::textarea( 'expect', __( 'What to expect', 'comms-church-links' ), $s, __( 'One point per line. Shown in the Visit app.', 'comms-church-links' ) );
+						self::textarea( 'note_body', __( 'Lock-screen message', 'comms-church-links' ), $s, __( 'Shown under the next service on the lock screen.', 'comms-church-links' ) );
+						self::text( 'visit_url', __( 'Plan-a-visit form link (optional)', 'comms-church-links' ), $s, __( 'A Church Center form works well here.', 'comms-church-links' ), 'url' );
 						?>
 					</div>
 				</section>
 
 				<section class="chs-card">
-					<h2><?php esc_html_e( 'Church Center', 'comms-church-home-screen' ); ?></h2>
+					<h2><?php esc_html_e( 'Church Center', 'comms-church-links' ); ?></h2>
 					<label class="chs-field">
-						<span><?php esc_html_e( 'Church Center address', 'comms-church-home-screen' ); ?></span>
+						<span><?php esc_html_e( 'Church Center address', 'comms-church-links' ); ?></span>
 						<span class="chs-suffix"><span>https://</span><input type="text" name="<?php echo esc_attr( $o ); ?>[cc_subdomain]" value="<?php echo esc_attr( $s['cc_subdomain'] ); ?>" placeholder="yourchurch"><span>.churchcenter.com</span></span>
-						<small><?php esc_html_e( 'Turns on the Church Center apps below: Giving, Groups, Sign-ups, Calendar, Home and Get the App.', 'comms-church-home-screen' ); ?></small>
+						<small><?php esc_html_e( 'Turns on the Church Center apps below: Giving, Groups, Sign-ups, Calendar, Home and Get the App.', 'comms-church-links' ); ?></small>
 					</label>
 					<label class="chs-check">
 						<input type="checkbox" name="<?php echo esc_attr( $o ); ?>[cc_modal]" value="1" <?php checked( $s['cc_modal'] ); ?>>
-						<?php esc_html_e( 'On computers, open Church Center in a pop-up instead of a new tab', 'comms-church-home-screen' ); ?>
+						<?php esc_html_e( 'On computers, open Church Center in a pop-up instead of a new tab', 'comms-church-links' ); ?>
 					</label>
-					<p class="description"><?php esc_html_e( 'On phones, Church Center links open in the Church Center app when it is installed, and in the browser when it is not.', 'comms-church-home-screen' ); ?></p>
+					<p class="description"><?php esc_html_e( 'On phones, Church Center links open in the Church Center app when it is installed, and in the browser when it is not.', 'comms-church-links' ); ?></p>
 				</section>
 
 				<section class="chs-card">
-					<h2><?php esc_html_e( 'Events', 'comms-church-home-screen' ); ?></h2>
+					<h2><?php esc_html_e( 'Events', 'comms-church-links' ); ?></h2>
 					<fieldset class="chs-radios">
-						<label><input type="radio" name="<?php echo esc_attr( $o ); ?>[events_source]" value="none" <?php checked( $s['events_source'], 'none' ); ?>> <?php esc_html_e( 'No event list (the Events app links to your Church Center calendar)', 'comms-church-home-screen' ); ?></label>
-						<label><input type="radio" name="<?php echo esc_attr( $o ); ?>[events_source]" value="pco" <?php checked( $s['events_source'], 'pco' ); ?>> <?php esc_html_e( 'Planning Center: the events you show in Church Center', 'comms-church-home-screen' ); ?></label>
-						<label><input type="radio" name="<?php echo esc_attr( $o ); ?>[events_source]" value="ics" <?php checked( $s['events_source'], 'ics' ); ?>> <?php esc_html_e( 'Calendar feed (a public iCal link, such as Google Calendar\'s)', 'comms-church-home-screen' ); ?></label>
-						<label><input type="radio" name="<?php echo esc_attr( $o ); ?>[events_source]" value="tec" <?php checked( $s['events_source'], 'tec' ); ?> <?php disabled( ! $tec ); ?>> <?php esc_html_e( 'The Events Calendar plugin on this site', 'comms-church-home-screen' ); ?><?php echo $tec ? '' : ' <em>' . esc_html__( '(not installed)', 'comms-church-home-screen' ) . '</em>'; ?></label>
+						<label><input type="radio" name="<?php echo esc_attr( $o ); ?>[events_source]" value="none" <?php checked( $s['events_source'], 'none' ); ?>> <?php esc_html_e( 'No event list (the Events app links to your Church Center calendar)', 'comms-church-links' ); ?></label>
+						<label><input type="radio" name="<?php echo esc_attr( $o ); ?>[events_source]" value="pco" <?php checked( $s['events_source'], 'pco' ); ?>> <?php esc_html_e( 'Planning Center: the events you show in Church Center', 'comms-church-links' ); ?></label>
+						<label><input type="radio" name="<?php echo esc_attr( $o ); ?>[events_source]" value="ics" <?php checked( $s['events_source'], 'ics' ); ?>> <?php esc_html_e( 'Calendar feed (a public iCal link, such as Google Calendar\'s)', 'comms-church-links' ); ?></label>
+						<label><input type="radio" name="<?php echo esc_attr( $o ); ?>[events_source]" value="tec" <?php checked( $s['events_source'], 'tec' ); ?> <?php disabled( ! $tec ); ?>> <?php esc_html_e( 'The Events Calendar plugin on this site', 'comms-church-links' ); ?><?php echo $tec ? '' : ' <em>' . esc_html__( '(not installed)', 'comms-church-links' ) . '</em>'; ?></label>
 					</fieldset>
 					<?php self::pco_fields( $s ); ?>
 					<div class="chs-grid">
 						<?php
-						self::text( 'ics_url', __( 'Calendar feed link', 'comms-church-home-screen' ), $s, __( 'Starts with webcal:// or https:// and usually ends in .ics. Refreshed every hour.', 'comms-church-home-screen' ), 'url' );
+						self::text( 'ics_url', __( 'Calendar feed link', 'comms-church-links' ), $s, __( 'Starts with webcal:// or https:// and usually ends in .ics. Refreshed every hour.', 'comms-church-links' ), 'url' );
 						?>
 						<label class="chs-field">
-							<span><?php esc_html_e( 'How many events to show', 'comms-church-home-screen' ); ?></span>
+							<span><?php esc_html_e( 'How many events to show', 'comms-church-links' ); ?></span>
 							<input type="number" min="1" max="10" name="<?php echo esc_attr( $o ); ?>[events_count]" value="<?php echo esc_attr( $s['events_count'] ); ?>">
 						</label>
 					</div>
 				</section>
 
 				<section class="chs-card">
-					<h2><?php esc_html_e( 'Apps', 'comms-church-home-screen' ); ?></h2>
-					<p class="description"><?php esc_html_e( 'Drag to reorder. Up to four apps fit in the dock. Apps with no link yet, or Church Center apps without a Church Center address, stay hidden.', 'comms-church-home-screen' ); ?></p>
+					<h2><?php esc_html_e( 'Links', 'comms-church-links' ); ?></h2>
+					<p class="description"><?php esc_html_e( 'Drag to reorder. A watched page always links to the newest item on it, like this week\'s bulletin or the latest sermon. Links with no address yet, or Church Center links without a Church Center address, stay hidden. In the phone layout, up to four sit in the dock.', 'comms-church-links' ); ?></p>
 					<div id="chs-apps" class="chs-apps">
 						<?php
 						foreach ( $s['apps'] as $i => $app ) {
@@ -519,60 +537,66 @@ class CHS_Settings {
 						}
 						?>
 					</div>
-					<script type="text/html" id="tmpl-chs-app-row"><?php self::app_row( '__i__', array( 'type' => 'link', 'label' => '', 'icon' => 'link', 'color' => '#64748b', 'url' => '', 'place' => 'grid' ) ); ?></script>
-					<p><button type="button" class="button" id="chs-add-app"><?php esc_html_e( 'Add app', 'comms-church-home-screen' ); ?></button></p>
+					<script type="text/html" id="tmpl-chs-app-row"><?php self::app_row( '__i__', array( 'type' => 'link', 'label' => '', 'icon' => 'link', 'color' => '#64748b', 'url' => '', 'match' => '', 'place' => 'grid' ) ); ?></script>
+					<p><button type="button" class="button" id="chs-add-app"><?php esc_html_e( 'Add link', 'comms-church-links' ); ?></button></p>
 				</section>
 
 				<section class="chs-card">
-					<h2><?php esc_html_e( 'Look', 'comms-church-home-screen' ); ?></h2>
+					<h2><?php esc_html_e( 'Look', 'comms-church-links' ); ?></h2>
 					<fieldset class="chs-radios">
-						<legend><?php esc_html_e( 'Wallpaper', 'comms-church-home-screen' ); ?></legend>
-						<label><input type="radio" name="<?php echo esc_attr( $o ); ?>[wallpaper]" value="dawn" <?php checked( $s['wallpaper'], 'dawn' ); ?>> <?php esc_html_e( 'Sunrise over hills', 'comms-church-home-screen' ); ?></label>
-						<label><input type="radio" name="<?php echo esc_attr( $o ); ?>[wallpaper]" value="brand" <?php checked( $s['wallpaper'], 'brand' ); ?>> <?php esc_html_e( 'Brand color gradient', 'comms-church-home-screen' ); ?></label>
-						<label><input type="radio" name="<?php echo esc_attr( $o ); ?>[wallpaper]" value="image" <?php checked( $s['wallpaper'], 'image' ); ?>> <?php esc_html_e( 'Your photo', 'comms-church-home-screen' ); ?></label>
+						<legend><?php esc_html_e( 'Layout', 'comms-church-links' ); ?></legend>
+						<label><input type="radio" name="<?php echo esc_attr( $o ); ?>[display]" value="list" <?php checked( $s['display'], 'list' ); ?>> <?php esc_html_e( 'Link list: your next service, then a button for each link', 'comms-church-links' ); ?></label>
+						<label><input type="radio" name="<?php echo esc_attr( $o ); ?>[display]" value="phone" <?php checked( $s['display'], 'phone' ); ?>> <?php esc_html_e( 'Phone home screen: a lock screen to swipe up, then app icons', 'comms-church-links' ); ?></label>
+					</fieldset>
+					<div class="chs-grid">
+						<label class="chs-field">
+							<span><?php esc_html_e( 'Brand color', 'comms-church-links' ); ?></span>
+							<input type="color" name="<?php echo esc_attr( $o ); ?>[brand]" value="<?php echo esc_attr( $s['brand'] ); ?>">
+							<small><?php esc_html_e( 'Used for the header and buttons.', 'comms-church-links' ); ?></small>
+						</label>
+					</div>
+					<h3 class="chs-sub"><?php esc_html_e( 'Phone home screen only', 'comms-church-links' ); ?></h3>
+					<fieldset class="chs-radios">
+						<legend><?php esc_html_e( 'Wallpaper', 'comms-church-links' ); ?></legend>
+						<label><input type="radio" name="<?php echo esc_attr( $o ); ?>[wallpaper]" value="dawn" <?php checked( $s['wallpaper'], 'dawn' ); ?>> <?php esc_html_e( 'Sunrise over hills', 'comms-church-links' ); ?></label>
+						<label><input type="radio" name="<?php echo esc_attr( $o ); ?>[wallpaper]" value="brand" <?php checked( $s['wallpaper'], 'brand' ); ?>> <?php esc_html_e( 'Brand color gradient', 'comms-church-links' ); ?></label>
+						<label><input type="radio" name="<?php echo esc_attr( $o ); ?>[wallpaper]" value="image" <?php checked( $s['wallpaper'], 'image' ); ?>> <?php esc_html_e( 'Your photo', 'comms-church-links' ); ?></label>
 					</fieldset>
 					<div class="chs-wall-pick">
 						<input type="hidden" id="chs-wall-id" name="<?php echo esc_attr( $o ); ?>[wallpaper_image]" value="<?php echo esc_attr( $s['wallpaper_image'] ); ?>">
 						<img id="chs-wall-preview" src="<?php echo esc_url( $wall_src ); ?>" alt="" <?php echo $wall_src ? '' : 'hidden'; ?>>
-						<button type="button" class="button" id="chs-wall-choose"><?php esc_html_e( 'Choose photo', 'comms-church-home-screen' ); ?></button>
-						<small><?php esc_html_e( 'A tall photo works best, at least 1200px high.', 'comms-church-home-screen' ); ?></small>
+						<button type="button" class="button" id="chs-wall-choose"><?php esc_html_e( 'Choose photo', 'comms-church-links' ); ?></button>
+						<small><?php esc_html_e( 'A tall photo works best, at least 1200px high.', 'comms-church-links' ); ?></small>
 					</div>
-					<label class="chs-check"><input type="checkbox" name="<?php echo esc_attr( $o ); ?>[steeple]" value="1" <?php checked( $s['steeple'] ); ?>> <?php esc_html_e( 'Show a small church on the hill (sunrise wallpaper)', 'comms-church-home-screen' ); ?></label>
-					<div class="chs-grid">
-						<label class="chs-field">
-							<span><?php esc_html_e( 'Brand color', 'comms-church-home-screen' ); ?></span>
-							<input type="color" name="<?php echo esc_attr( $o ); ?>[brand]" value="<?php echo esc_attr( $s['brand'] ); ?>">
-							<small><?php esc_html_e( 'Used for buttons inside apps and the brand wallpaper.', 'comms-church-home-screen' ); ?></small>
-						</label>
-					</div>
-					<label class="chs-check"><input type="checkbox" name="<?php echo esc_attr( $o ); ?>[verse_on]" value="1" <?php checked( $s['verse_on'] ); ?>> <?php esc_html_e( 'Show a Bible verse widget', 'comms-church-home-screen' ); ?></label>
+					<label class="chs-check"><input type="checkbox" name="<?php echo esc_attr( $o ); ?>[steeple]" value="1" <?php checked( $s['steeple'] ); ?>> <?php esc_html_e( 'Show a small church on the hill (sunrise wallpaper)', 'comms-church-links' ); ?></label>
+					<label class="chs-check"><input type="checkbox" name="<?php echo esc_attr( $o ); ?>[verse_on]" value="1" <?php checked( $s['verse_on'] ); ?>> <?php esc_html_e( 'Show a Bible verse widget', 'comms-church-links' ); ?></label>
 					<div class="chs-grid">
 						<?php
-						self::textarea( 'verse_text', __( 'Verse', 'comms-church-home-screen' ), $s );
-						self::text( 'verse_ref', __( 'Reference', 'comms-church-home-screen' ), $s, __( 'Check the translation\'s copyright terms. The World English Bible is public domain.', 'comms-church-home-screen' ) );
+						self::textarea( 'verse_text', __( 'Verse', 'comms-church-links' ), $s );
+						self::text( 'verse_ref', __( 'Reference', 'comms-church-links' ), $s, __( 'Check the translation\'s copyright terms. The World English Bible is public domain.', 'comms-church-links' ) );
 						?>
 					</div>
 				</section>
 
 				<section class="chs-card">
-					<h2><?php esc_html_e( 'Web address', 'comms-church-home-screen' ); ?></h2>
+					<h2><?php esc_html_e( 'Web address', 'comms-church-links' ); ?></h2>
 					<label class="chs-field">
-						<span><?php esc_html_e( 'Path', 'comms-church-home-screen' ); ?></span>
+						<span><?php esc_html_e( 'Path', 'comms-church-links' ); ?></span>
 						<span class="chs-suffix"><span><?php echo esc_html( trailingslashit( home_url() ) ); ?></span><input type="text" name="<?php echo esc_attr( $o ); ?>[path]" value="<?php echo esc_attr( $s['path'] ); ?>"></span>
-						<small><?php esc_html_e( 'Pick something that is not already a page on your site.', 'comms-church-home-screen' ); ?></small>
+						<small><?php esc_html_e( 'Pick something that is not already a page on your site.', 'comms-church-links' ); ?></small>
 					</label>
 					<p class="description">
 						<?php
 						printf(
 							/* translators: %s: shortcode */
-							esc_html__( 'To show the home screen inside a page, add the %s shortcode.', 'comms-church-home-screen' ),
-							'<code>[church_home_screen]</code>'
+							esc_html__( 'To show your links inside a page, add the %s shortcode.', 'comms-church-links' ),
+							'<code>[church_links]</code>'
 						);
 						?>
 					</p>
 				</section>
 
-				<?php submit_button( __( 'Save changes', 'comms-church-home-screen' ) ); ?>
+				<?php submit_button( __( 'Save changes', 'comms-church-links' ) ); ?>
 			</form>
 		</div>
 		<?php
@@ -586,22 +610,22 @@ class CHS_Settings {
 	 */
 	private static function render_review( $findings, $first ) {
 		$groups = array(
-			'details'  => __( 'Church details', 'comms-church-home-screen' ),
-			'services' => __( 'Service times', 'comms-church-home-screen' ),
-			'cc'       => __( 'Church Center', 'comms-church-home-screen' ),
-			'events'   => __( 'Events', 'comms-church-home-screen' ),
-			'apps'     => __( 'Apps', 'comms-church-home-screen' ),
-			'look'     => __( 'Look', 'comms-church-home-screen' ),
+			'details'  => __( 'Church details', 'comms-church-links' ),
+			'services' => __( 'Service times', 'comms-church-links' ),
+			'cc'       => __( 'Church Center', 'comms-church-links' ),
+			'events'   => __( 'Events', 'comms-church-links' ),
+			'apps'     => __( 'Links', 'comms-church-links' ),
+			'look'     => __( 'Look', 'comms-church-links' ),
 		);
 		$back   = admin_url( 'options-general.php?page=' . self::PAGE );
 		?>
 		<section class="chs-card chs-review">
-			<h2><?php echo esc_html( $first ? __( 'We looked through your site to get you started', 'comms-church-home-screen' ) : __( 'Here is what we found on your site', 'comms-church-home-screen' ) ); ?></h2>
+			<h2><?php echo esc_html( $first ? __( 'We looked through your site to get you started', 'comms-church-links' ) : __( 'Here is what we found on your site', 'comms-church-links' ) ); ?></h2>
 			<?php if ( ! $findings ) : ?>
-				<p><?php esc_html_e( 'Nothing new turned up. Your settings already match what is on your site, or the site keeps that information somewhere we can\'t read.', 'comms-church-home-screen' ); ?></p>
-				<p><a class="button" href="<?php echo esc_url( $back ); ?>"><?php esc_html_e( 'Back to settings', 'comms-church-home-screen' ); ?></a></p>
+				<p><?php esc_html_e( 'Nothing new turned up. Your settings already match what is on your site, or the site keeps that information somewhere we can\'t read.', 'comms-church-links' ); ?></p>
+				<p><a class="button" href="<?php echo esc_url( $back ); ?>"><?php esc_html_e( 'Back to settings', 'comms-church-links' ); ?></a></p>
 			<?php else : ?>
-				<p class="description"><?php esc_html_e( 'Check what you want to use. Nothing changes until you choose "Use selected", and you can edit everything afterwards.', 'comms-church-home-screen' ); ?></p>
+				<p class="description"><?php esc_html_e( 'Check what you want to use. Nothing changes until you choose "Use selected", and you can edit everything afterwards.', 'comms-church-links' ); ?></p>
 				<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
 					<input type="hidden" name="action" value="chs_apply_scan">
 					<?php wp_nonce_field( 'chs_apply_scan' ); ?>
@@ -614,7 +638,7 @@ class CHS_Settings {
 						?>
 						<h3><?php echo esc_html( $gname ); ?></h3>
 						<?php if ( 'services' === $gk ) : ?>
-							<p class="description"><?php esc_html_e( 'Checked times replace your current service times. Times are read from your pages, so please make sure they are right.', 'comms-church-home-screen' ); ?></p>
+							<p class="description"><?php esc_html_e( 'Checked times replace your current service times. Times are read from your pages, so please make sure they are right.', 'comms-church-links' ); ?></p>
 						<?php endif; ?>
 						<ul class="chs-findings">
 							<?php foreach ( $items as $it ) : ?>
@@ -641,8 +665,8 @@ class CHS_Settings {
 						</ul>
 					<?php endforeach; ?>
 					<p class="chs-review-actions">
-						<button type="submit" class="button button-primary"><?php esc_html_e( 'Use selected', 'comms-church-home-screen' ); ?></button>
-						<a class="button" href="<?php echo esc_url( $back ); ?>"><?php esc_html_e( 'Skip for now', 'comms-church-home-screen' ); ?></a>
+						<button type="submit" class="button button-primary"><?php esc_html_e( 'Use selected', 'comms-church-links' ); ?></button>
+						<a class="button" href="<?php echo esc_url( $back ); ?>"><?php esc_html_e( 'Skip for now', 'comms-church-links' ); ?></a>
 					</p>
 				</form>
 			<?php endif; ?>
@@ -666,34 +690,65 @@ class CHS_Settings {
 				<p class="description">
 					<?php
 					/* translators: %s: plugin name */
-					echo esc_html( sprintf( __( 'Uses the Planning Center connection from %s. Enter a key below only to use a different one.', 'comms-church-home-screen' ), $cred['from'] ) );
+					echo esc_html( sprintf( __( 'Uses the Planning Center connection from %s. Enter a key below only to use a different one.', 'comms-church-links' ), $cred['from'] ) );
 					?>
 				</p>
 			<?php else : ?>
 				<p class="description">
-					<?php esc_html_e( 'Create a Personal Access Token at api.planningcenteronline.com (Personal Access Tokens → New) and paste its Application ID and Secret here. Only events marked to show in Church Center appear, and only the place name, never the street address.', 'comms-church-home-screen' ); ?>
+					<?php esc_html_e( 'Create a Personal Access Token at api.planningcenteronline.com (Personal Access Tokens → New) and paste its Application ID and Secret here. Only events marked to show in Church Center appear, and only the place name, never the street address.', 'comms-church-links' ); ?>
 				</p>
 			<?php endif; ?>
 			<div class="chs-grid">
-				<?php self::text( 'pco_app_id', __( 'Planning Center Application ID', 'comms-church-home-screen' ), $s ); ?>
+				<?php self::text( 'pco_app_id', __( 'Planning Center Application ID', 'comms-church-links' ), $s ); ?>
 				<label class="chs-field">
-					<span><?php esc_html_e( 'Planning Center Secret', 'comms-church-home-screen' ); ?></span>
-					<input type="password" name="<?php echo esc_attr( $o . '[pco_secret]' ); ?>" value="" autocomplete="new-password" placeholder="<?php echo $own ? esc_attr__( 'Saved. Leave blank to keep it.', 'comms-church-home-screen' ) : ''; ?>">
+					<span><?php esc_html_e( 'Planning Center Secret', 'comms-church-links' ); ?></span>
+					<input type="password" name="<?php echo esc_attr( $o . '[pco_secret]' ); ?>" value="" autocomplete="new-password" placeholder="<?php echo $own ? esc_attr__( 'Saved. Leave blank to keep it.', 'comms-church-links' ) : ''; ?>">
 				</label>
 			</div>
 			<?php if ( $own ) : ?>
-				<label><input type="checkbox" name="<?php echo esc_attr( $o ); ?>[pco_clear]" value="1"> <?php esc_html_e( 'Remove this key', 'comms-church-home-screen' ); ?></label>
+				<label><input type="checkbox" name="<?php echo esc_attr( $o ); ?>[pco_clear]" value="1"> <?php esc_html_e( 'Remove this key', 'comms-church-links' ); ?></label>
 			<?php endif; ?>
 			<?php if ( 'pco' === $s['events_source'] && is_array( $status ) ) : ?>
 				<p class="chs-pco-status <?php echo $status['ok'] ? 'is-ok' : 'is-error'; ?>">
 					<?php
 					/* translators: 1: status message, 2: time ago */
-					echo esc_html( sprintf( __( '%1$s Checked %2$s ago.', 'comms-church-home-screen' ), $status['msg'], human_time_diff( $status['time'] ) ) );
+					echo esc_html( sprintf( __( '%1$s Checked %2$s ago.', 'comms-church-links' ), $status['msg'], human_time_diff( $status['time'] ) ) );
 					?>
 				</p>
 			<?php endif; ?>
 		</div>
 		<?php
+	}
+
+	/**
+	 * Under a watched-page app: what it links to right now.
+	 *
+	 * @param array $app App row.
+	 */
+	private static function watch_status( $app ) {
+		if ( 'watch' !== $app['type'] || ! $app['url'] ) {
+			echo '<small class="chs-watch-help">' . esc_html__( 'Point it at your bulletin page, a sermon archive or a news page. When the page changes, this link follows the newest item on it: no approval needed.', 'comms-church-links' ) . '</small>';
+			return;
+		}
+		$type = CHS_Watch::post_type_for( $app['url'] );
+		$w    = CHS_Watch::resolve( $app );
+		if ( ! $w ) {
+			echo '<small class="chs-watch-now is-empty">' . esc_html__( 'No matching link on that page yet, so this app stays hidden.', 'comms-church-links' ) . '</small>';
+			return;
+		}
+		$obj = $type ? get_post_type_object( $type ) : null;
+		printf(
+			'<small class="chs-watch-now">%1$s <a href="%2$s" target="_blank" rel="noopener">%3$s</a> %4$s</small>',
+			esc_html__( 'Now links to', 'comms-church-links' ),
+			esc_url( $w['href'] ),
+			esc_html( $w['text'] ),
+			esc_html(
+				$obj
+					/* translators: %s: post type name, like Sermons */
+					? sprintf( __( '(the newest of your %s, checked on every visit)', 'comms-church-links' ), $obj->labels->name )
+					: __( '(re-checked when that page is saved, and daily)', 'comms-church-links' )
+			)
+		);
 	}
 
 	/**
@@ -753,36 +808,42 @@ class CHS_Settings {
 		<div class="chs-app" data-type="<?php echo esc_attr( $app['type'] ); ?>">
 			<span class="chs-handle" aria-hidden="true">⋮⋮</span>
 			<span class="chs-swatch" style="--c:<?php echo esc_attr( $app['color'] ); ?>;--g:<?php echo esc_attr( chs_glyph_color( $app['color'] ) ); ?>"><?php echo chs_icon_svg( 'today' === $app['icon'] ? 'calendar' : $app['icon'] ); // phpcs:ignore WordPress.Security.EscapeOutput -- fixed icon library. ?></span>
-			<label><span><?php esc_html_e( 'Type', 'comms-church-home-screen' ); ?></span>
+			<label><span><?php esc_html_e( 'Type', 'comms-church-links' ); ?></span>
 				<select class="chs-type" name="<?php echo esc_attr( $n . '[type]' ); ?>">
 					<?php foreach ( $types as $key => $t ) : ?>
 						<option value="<?php echo esc_attr( $key ); ?>" <?php selected( $app['type'], $key ); ?>><?php echo esc_html( $t['name'] ); ?></option>
 					<?php endforeach; ?>
 				</select>
 			</label>
-			<label><span><?php esc_html_e( 'Label', 'comms-church-home-screen' ); ?></span>
+			<label><span><?php esc_html_e( 'Label', 'comms-church-links' ); ?></span>
 				<input class="chs-label" type="text" maxlength="24" name="<?php echo esc_attr( $n . '[label]' ); ?>" value="<?php echo esc_attr( $app['label'] ); ?>">
 			</label>
-			<label><span><?php esc_html_e( 'Icon', 'comms-church-home-screen' ); ?></span>
+			<label><span><?php esc_html_e( 'Icon', 'comms-church-links' ); ?></span>
 				<select class="chs-icon" name="<?php echo esc_attr( $n . '[icon]' ); ?>">
 					<?php foreach ( chs_icons() as $key => $icon ) : ?>
 						<option value="<?php echo esc_attr( $key ); ?>" <?php selected( $app['icon'], $key ); ?>><?php echo esc_html( $icon['label'] ); ?></option>
 					<?php endforeach; ?>
 				</select>
 			</label>
-			<label><span><?php esc_html_e( 'Color', 'comms-church-home-screen' ); ?></span>
+			<label><span><?php esc_html_e( 'Color', 'comms-church-links' ); ?></span>
 				<input class="chs-color" type="color" name="<?php echo esc_attr( $n . '[color]' ); ?>" value="<?php echo esc_attr( $app['color'] ); ?>">
 			</label>
-			<label class="chs-url-field"><span><?php esc_html_e( 'Link', 'comms-church-home-screen' ); ?></span>
+			<label class="chs-url-field"><span class="chs-url-link"><?php esc_html_e( 'Link', 'comms-church-links' ); ?></span><span class="chs-url-watch"><?php esc_html_e( 'Page to watch', 'comms-church-links' ); ?></span>
 				<input type="url" name="<?php echo esc_attr( $n . '[url]' ); ?>" value="<?php echo esc_attr( $app['url'] ); ?>" placeholder="https://">
 			</label>
-			<label><span><?php esc_html_e( 'Where', 'comms-church-home-screen' ); ?></span>
+			<label><span><?php esc_html_e( 'Where', 'comms-church-links' ); ?></span>
 				<select class="chs-place" name="<?php echo esc_attr( $n . '[place]' ); ?>">
-					<option value="grid" <?php selected( $app['place'], 'grid' ); ?>><?php esc_html_e( 'Home screen', 'comms-church-home-screen' ); ?></option>
-					<option value="dock" <?php selected( $app['place'], 'dock' ); ?>><?php esc_html_e( 'Dock', 'comms-church-home-screen' ); ?></option>
+					<option value="grid" <?php selected( $app['place'], 'grid' ); ?>><?php esc_html_e( 'Home screen', 'comms-church-links' ); ?></option>
+					<option value="dock" <?php selected( $app['place'], 'dock' ); ?>><?php esc_html_e( 'Dock', 'comms-church-links' ); ?></option>
 				</select>
 			</label>
-			<button type="button" class="button-link chs-remove"><?php esc_html_e( 'Remove', 'comms-church-home-screen' ); ?></button>
+			<button type="button" class="button-link chs-remove"><?php esc_html_e( 'Remove', 'comms-church-links' ); ?></button>
+			<div class="chs-watch-field">
+				<label><span><?php esc_html_e( 'Only links containing (optional)', 'comms-church-links' ); ?></span>
+					<input type="text" maxlength="40" name="<?php echo esc_attr( $n . '[match]' ); ?>" value="<?php echo esc_attr( $app['match'] ); ?>" placeholder="<?php esc_attr_e( 'bulletin', 'comms-church-links' ); ?>">
+				</label>
+				<?php self::watch_status( $app ); ?>
+			</div>
 		</div>
 		<?php
 	}

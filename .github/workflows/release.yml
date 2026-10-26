@@ -21,8 +21,8 @@ jobs:
 
       - name: Verify plugin header version matches tag
         run: |
-          HEADER_VERSION=$(grep -m1 "Version:" comms-church-home-screen.php | sed -E 's/.*Version:\s*//')
-          CONST_VERSION=$(grep -m1 "define( 'CHS_VERSION'" comms-church-home-screen.php | sed -E "s/.*'([0-9.]+)'.*/\1/")
+          HEADER_VERSION=$(grep -m1 "Version:" comms-church-links.php | sed -E 's/.*Version:\s*//')
+          CONST_VERSION=$(grep -m1 "define( 'CHS_VERSION'" comms-church-links.php | sed -E "s/.*'([0-9.]+)'.*/\1/")
           TAG_VERSION="${{ steps.tag.outputs.version }}"
 
           echo "Tag version:    $TAG_VERSION"
@@ -41,22 +41,22 @@ jobs:
 
       - name: Build plugin zip
         run: |
-          mkdir -p build/comms-church-home-screen
+          mkdir -p build/comms-church-links
           rsync -a --exclude='.git' --exclude='.github' --exclude='.claude' --exclude='build' \
             --exclude='.gitignore' --exclude='.gitattributes' --exclude='deploy.sh' --exclude='.DS_Store' \
             --exclude='node_modules' --exclude='tests' --exclude='test-results' \
             --exclude='playwright-report' --exclude='screenshots' --exclude='package.json' \
             --exclude='package-lock.json' --exclude='playwright.config.js' \
-            ./ build/comms-church-home-screen/
+            ./ build/comms-church-links/
           cd build
-          zip -r comms-church-home-screen.zip comms-church-home-screen
+          zip -r comms-church-links.zip comms-church-links
           cd ..
-          mv build/comms-church-home-screen.zip comms-church-home-screen.zip
+          mv build/comms-church-links.zip comms-church-links.zip
 
       - name: Create Release
         uses: softprops/action-gh-release@v2
         with:
-          files: comms-church-home-screen.zip
+          files: comms-church-links.zip
           generate_release_notes: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

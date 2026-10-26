@@ -2,7 +2,7 @@
 /**
  * Upcoming events from Planning Center (Church Center events), a calendar feed (iCal) or The Events Calendar.
  *
- * @package ChurchHomeScreen
+ * @package ChurchLinks
  */
 
 defined( 'ABSPATH' ) || exit;
@@ -157,7 +157,7 @@ class CHS_Events {
 	 */
 	private static function from_pco( $cred ) {
 		if ( ! $cred ) {
-			self::status( false, __( 'No Planning Center API key yet.', 'comms-church-home-screen' ) );
+			self::status( false, __( 'No Planning Center API key yet.', 'comms-church-links' ) );
 			return null;
 		}
 		$auth = array( 'Authorization' => 'Basic ' . base64_encode( $cred['app_id'] . ':' . $cred['secret'] ) );
@@ -171,7 +171,7 @@ class CHS_Events {
 			if ( 200 !== $code || ! is_array( $body ) ) {
 				$msg = isset( $body['errors'][0]['detail'] ) ? $body['errors'][0]['detail'] : ( isset( $body['errors'][0]['title'] ) ? $body['errors'][0]['title'] : '' );
 				/* translators: %d: HTTP status code */
-				return new WP_Error( 'chs_pco', $msg ? $msg : sprintf( __( 'Planning Center answered with error %d.', 'comms-church-home-screen' ), $code ) );
+				return new WP_Error( 'chs_pco', $msg ? $msg : sprintf( __( 'Planning Center answered with error %d.', 'comms-church-links' ), $code ) );
 			}
 			return $body;
 		};
@@ -225,7 +225,7 @@ class CHS_Events {
 			}
 		);
 		/* translators: %d: number of events */
-		self::status( true, sprintf( _n( '%d event is shown in Church Center.', '%d events are shown in Church Center.', count( $events ), 'comms-church-home-screen' ), count( $events ) ), $cred['from'] );
+		self::status( true, sprintf( _n( '%d event is shown in Church Center.', '%d events are shown in Church Center.', count( $events ), 'comms-church-links' ), count( $events ) ), $cred['from'] );
 		return array_slice( $out, 0, 200 );
 	}
 
@@ -268,7 +268,7 @@ class CHS_Events {
 			$url,
 			array(
 				'timeout'    => 8,
-				'user-agent' => 'Church Home Screen/' . CHS_VERSION . '; ' . home_url(),
+				'user-agent' => 'Church Links/' . CHS_VERSION . '; ' . home_url(),
 			)
 		);
 		if ( is_wp_error( $res ) || 200 !== (int) wp_remote_retrieve_response_code( $res ) ) {

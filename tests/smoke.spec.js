@@ -1,14 +1,15 @@
 // Release smoke suite — green, or no release.
-// Runs against WordPress Playground with the plugin active and a "Plan a Visit"
-// page seeded with service times, a phone number and a Church Center link
-// (tests/blueprint.json). The blueprint's test-only mu-plugin resets the plugin
-// to its just-activated state, so the first-visit scan runs on every pass.
+// Runs against WordPress Playground with the plugin active and pages seeded with
+// service times, contact details, a Church Center link, a bulletin page and a
+// sermon archive (tests/blueprint.json). The blueprint's test-only mu-plugins reset
+// the plugin to its just-activated state, so the first-visit scan runs on every pass.
 const { test, expect } = require('@playwright/test');
 
 // PHP problems surface as text in the page body, not HTTP errors.
 const PHP_ERRORS = /Fatal error|Parse error|Warning: |Notice: |Deprecated: /;
 
-const SETTINGS = '/wp-admin/options-general.php?page=church-home-screen';
+const SETTINGS = '/wp-admin/options-general.php?page=church-links';
+const BULLETIN = /\/uploads\/2026\/10\/bulletin-2026-10-26\.pdf$/;
 
 async function expectClean(page) {
   const body = await page.locator('body').innerText();
@@ -35,6 +36,8 @@ test.beforeAll(async ({ browser }) => {
   const page = await browser.newPage({ storageState: 'test-results/.auth/admin.json' });
   await page.goto('/wp-admin/?chs_test_reset=1');
   await expect(page.locator('body')).toContainText('chs reset');
+  await page.goto('/wp-admin/?chs_test_watch_reset=1');
+  await expect(page.locator('body')).toContainText('chs watch reset');
   await page.close();
 });
 
@@ -42,7 +45,7 @@ test('activation turns the plugin on and points to setup', async ({ page }) => {
   // Deactivate and reactivate through the UI so the activation hook really runs
   // (it registers the route and queues the welcome notice).
   await page.goto('/wp-admin/plugins.php');
-  const row = page.locator('tr[data-plugin="comms-church-home-screen/comms-church-home-screen.php"]');
+  const row = page.locator('tr[data-plugin="comms-church-links/comms-church-links.php"]');
   await row.getByRole('link', { name: /^Deactivate/ }).click();
   await expect(row).toHaveClass(/\binactive\b/);
   await row.getByRole('link', { name: /^Activate/ }).click();
@@ -51,7 +54,7 @@ test('activation turns the plugin on and points to setup', async ({ page }) => {
   await expect(row).toHaveClass(/\bactive\b/);
   await expect(row.getByRole('link', { name: 'Settings' })).toBeVisible();
   await expect(row.getByRole('link', { name: 'Check for updates' })).toBeVisible();
-  await expect(page.getByRole('link', { name: 'Set up your home screen' })).toBeVisible();
+  await expect(page.getByRole('link', { name: 'Set up your links page' })).toBeVisible();
 });
 
 test('first visit to settings scans the site and shows the review', async ({ page }) => {
@@ -81,6 +84,10 @@ test('first visit to settings scans the site and shows the review', async ({ pag
   await expectFinding(review, 'Address', '212 Peach Bottom Road, Willow Street, PA 17584', true);
   await expect(review).not.toContainText('11 AM ADDRESS');
   await expectFinding(review, 'Town and state', 'Willow Street, PA', true);
+  // A bulletin page and a sermon archive come in as watched links.
+  await expectFinding(review, 'Bulletin', '/bulletin/', true);
+  await expect(review.locator('.chs-findings li', { hasText: '/bulletin/' })).toContainText('Watched');
+  await expectFinding(review, 'Sermons', '/sermons/', true);
 
   await page.getByRole('button', { name: 'Use selected' }).click();
   await expect(page.locator('.notice-success')).toContainText(/Filled in \d+ settings? from your site/);
@@ -88,7 +95,7 @@ test('first visit to settings scans the site and shows the review', async ({ pag
   // The scan runs once; the settings form is what comes up from now on.
   await expect(page.locator('.chs-review')).toHaveCount(0);
   await expect(page.locator('#chs-form')).toBeVisible();
-  await expect(page.getByRole('link', { name: 'Set up your home screen' })).toHaveCount(0);
+  await expect(page.getByRole('link', { name: 'Set up your links page' })).toHaveCount(0);
 });
 
 test('settings save and persist', async ({ page }) => {
@@ -99,6 +106,63 @@ test('settings save and persist', async ({ page }) => {
   await expect(page.locator('#setting-error-settings_updated')).toBeVisible();
   await expectClean(page);
   await expect(page.locator('input[name="chs_settings[church_name]"]')).toHaveValue('Harbor Church Smoke');
+  // Watched links say what they point at right now.
+  const bulletin = page.locator('.chs-app[data-type="watch"]', { has: page.locator('input[value$="/bulletin/"]') });
+  await expect(bulletin.locator('.chs-watch-now')).toContainText('Bulletin – October 26, 2026');
+  // The QR code is drawn for the live address.
+  await expect(page.locator('#chs-qr svg path')).toHaveAttribute('d', /^M/);
+  await expect(page.getByRole('button', { name: 'Download QR (PNG)' })).toBeVisible();
+});
+
+test('/links is a link list that follows watched pages', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  const res = await page.goto('/links/');
+  expect(res.status()).toBe(200);
+  await expectClean(page);
+  await expect(page.locator('h1')).toHaveText('Harbor Church Smoke');
+  await expect(page.locator('.cl-next [data-svc="time"]')).not.toBeEmpty();
+
+  const links = page.locator('nav.cl-links');
+  const bulletin = links.locator('a.cl-link', { hasText: 'Bulletin' });
+  // The newest bulletin by date, though it is listed last on the page.
+  await expect(bulletin).toHaveAttribute('href', BULLETIN);
+  await expect(bulletin.locator('.cl-detail')).toHaveText('Bulletin – October 26, 2026');
+  await expect(bulletin.locator('.cl-new')).toHaveCount(0);
+  const sermons = links.locator('a.cl-link', { hasText: 'Sermons' });
+  await expect(sermons.locator('.cl-detail')).toHaveText('Rest for the Weary');
+
+  // Phones get no QR code; it's only for carrying the page from a computer to a phone.
+  await expect(page.locator('.cl-qr')).toBeHidden();
+
+  // Panels open in place.
+  await links.locator('summary', { hasText: 'Contact' }).click();
+  await expect(page.locator('#cl-contact')).toContainText('555-0100');
+
+  // The church posts next week's bulletin and a new sermon; the page follows with no one approving it.
+  await page.goto('/wp-admin/?chs_test_bulletin=1');
+  await expect(page.locator('body')).toContainText('chs bulletin posted');
+  await page.goto('/wp-admin/?chs_test_sermon=1');
+  await expect(page.locator('body')).toContainText('chs sermon posted');
+  await page.goto('/links/');
+  await expect(bulletin).toHaveAttribute('href', /bulletin-2026-11-02\.pdf$/);
+  await expect(bulletin.locator('.cl-new')).toHaveText('New');
+  await expect(sermons.locator('.cl-detail')).toHaveText('When God Feels Far');
+  await expect(sermons.locator('.cl-new')).toHaveText('New');
+});
+
+test('on a computer, /links offers a QR code to open it on a phone', async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await page.goto('/links/');
+  await expect(page.locator('.cl-qr')).toBeVisible();
+  await expect(page.locator('#clQr svg path')).toHaveAttribute('d', /^M/);
+});
+
+test('phone layout is still there as an option', async ({ page }) => {
+  await page.goto(SETTINGS);
+  await page.locator('input[name="chs_settings[display]"][value="phone"]').check();
+  await page.locator('#chs-form').getByRole('button', { name: 'Save changes' }).click();
+  await expect(page.locator('#setting-error-settings_updated')).toBeVisible();
+  await expectClean(page);
 });
 
 test('/links renders and swipe up unlocks it', async ({ page }) => {
@@ -124,6 +188,9 @@ test('/links renders and swipe up unlocks it', async ({ page }) => {
   await expect(screen).toHaveClass(/\bunlocked\b/);
   await expect(page.locator('#home')).not.toHaveAttribute('inert');
   await expect(page.locator('#home nav.apps')).toBeVisible();
+  // Watched links work here too, with a badge when they changed this week.
+  await expect(page.locator('#home a.app', { hasText: 'Bulletin' })).toHaveAttribute('href', /bulletin-2026-11-02\.pdf$/);
+  await expect(page.locator('#home a.app', { hasText: 'Bulletin' }).locator('.badge')).toHaveCount(1);
 });
 
 test('Planning Center source lists only Church Center events', async ({ page }) => {

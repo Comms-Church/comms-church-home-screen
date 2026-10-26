@@ -1,4 +1,4 @@
-/* Church Home Screen — front end behavior. */
+/* Church Links — front end behavior. */
 (function () {
 	'use strict';
 

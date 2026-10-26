@@ -1,4 +1,4 @@
-/* Church Home Screen — settings page. */
+/* Church Links — settings page. */
 jQuery(function ($) {
 	'use strict';
 
@@ -82,4 +82,51 @@ jQuery(function ($) {
 	});
 
 	$('#chs-form').on('submit', reindex);
+
+	// QR code for the links page, drawn here so it always matches the current address.
+	var $qr = $('#chs-qr');
+	if ($qr.length && window.qrcode) {
+		var qr = window.qrcode(0, 'M');
+		qr.addData($qr.data('url'));
+		qr.make();
+		var n = qr.getModuleCount(), quiet = 4, size = n + quiet * 2, path = '';
+		for (var r = 0; r < n; r++) {
+			for (var c = 0; c < n; c++) {
+				if (qr.isDark(r, c)) path += 'M' + (c + quiet) + ' ' + (r + quiet) + 'h1v1h-1z';
+			}
+		}
+		var svg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ' + size + ' ' + size + '" shape-rendering="crispEdges">' +
+			'<rect width="100%" height="100%" fill="#fff"/><path d="' + path + '" fill="#000"/></svg>';
+		$qr.html(svg);
+
+		var save = function (href, ext) {
+			var a = document.createElement('a');
+			a.href = href;
+			a.download = (A.qrName || 'links-qr') + '.' + ext;
+			document.body.appendChild(a);
+			a.click();
+			a.remove();
+		};
+		$('[data-qr-download]').on('click', function () {
+			var blob = new Blob([svg], { type: 'image/svg+xml' });
+			var url = URL.createObjectURL(blob);
+			if ($(this).data('qr-download') === 'svg') {
+				save(url, 'svg');
+				setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
+				return;
+			}
+			// PNG at print size: 1200px wide, sharp edges.
+			var img = new Image();
+			img.onload = function () {
+				var canvas = document.createElement('canvas');
+				canvas.width = canvas.height = 1200;
+				var ctx = canvas.getContext('2d');
+				ctx.imageSmoothingEnabled = false;
+				ctx.drawImage(img, 0, 0, 1200, 1200);
+				URL.revokeObjectURL(url);
+				save(canvas.toDataURL('image/png'), 'png');
+			};
+			img.src = url;
+		});
+	}
 });

@@ -1,8 +1,8 @@
 <?php
 /**
- * Front end: the standalone home screen route and the shortcode.
+ * Front end: the standalone links page route and the shortcode.
  *
- * @package ChurchHomeScreen
+ * @package ChurchLinks
  */
 
 defined( 'ABSPATH' ) || exit;
@@ -22,7 +22,8 @@ class CHS_Frontend {
 		add_action( 'init', array( __CLASS__, 'rewrite' ) );
 		add_filter( 'query_vars', array( __CLASS__, 'query_vars' ) );
 		add_action( 'template_redirect', array( __CLASS__, 'maybe_render' ), 0 );
-		add_shortcode( 'church_home_screen', array( __CLASS__, 'shortcode' ) );
+		add_shortcode( 'church_links', array( __CLASS__, 'shortcode' ) );
+		add_shortcode( 'church_home_screen', array( __CLASS__, 'shortcode' ) ); // Name before the rename.
 	}
 
 	/**
@@ -61,7 +62,7 @@ class CHS_Frontend {
 	}
 
 	/**
-	 * Public URL of the home screen.
+	 * Public URL of the links page.
 	 *
 	 * @return string
 	 */
@@ -86,12 +87,12 @@ class CHS_Frontend {
 		status_header( 200 );
 		chs_nocache_if_logged_in();
 		header( 'Content-Type: text/html; charset=' . get_option( 'blog_charset' ) );
-		include CHS_DIR . 'templates/screen.php';
+		include CHS_DIR . ( 'phone' === $s['display'] ? 'templates/screen.php' : 'templates/list.php' );
 		exit;
 	}
 
 	/**
-	 * Shortcode: the home screen in a phone frame inside a normal page.
+	 * Shortcode: the links page inside a normal page (the phone layout sits in a phone frame).
 	 *
 	 * @return string
 	 */
@@ -101,6 +102,13 @@ class CHS_Frontend {
 			$src = add_query_arg( 'chs_screen', '1', $src );
 		}
 		$s = CHS_Settings::get();
+		if ( 'phone' !== $s['display'] ) {
+			return sprintf(
+				'<div class="chs-embed" style="max-width:520px;margin:0 auto;"><iframe src="%1$s" title="%2$s" loading="lazy" style="display:block;width:100%%;height:760px;border:0;border-radius:16px;"></iframe></div>',
+				esc_url( $src ),
+				esc_attr( $s['church_name'] )
+			);
+		}
 		return sprintf(
 			'<div class="chs-embed" style="max-width:390px;margin:0 auto;"><iframe src="%1$s" title="%2$s" loading="lazy" style="display:block;width:100%%;aspect-ratio:390/844;height:auto;border:0;border-radius:44px;box-shadow:0 0 0 10px #16171e,0 30px 60px rgba(0,0,0,.25);"></iframe></div>',
 			esc_url( $src ),
@@ -124,6 +132,7 @@ class CHS_Frontend {
 
 		$grid = array();
 		$dock = array();
+		$all  = array();
 		foreach ( $s['apps'] as $i => $row ) {
 			if ( ! isset( $types[ $row['type'] ] ) ) {
 				continue;
@@ -140,6 +149,8 @@ class CHS_Frontend {
 				'cc'      => false,
 				'ios'     => '',
 				'android' => '',
+				'sub'     => '',
+				'new'     => false,
 			);
 
 			switch ( $row['type'] ) {
@@ -176,6 +187,16 @@ class CHS_Frontend {
 					$app['ios']     = self::APP_STORE;
 					$app['android'] = self::PLAY_STORE;
 					break;
+				case 'watch':
+					$w = $row['url'] ? CHS_Watch::resolve( $row ) : null;
+					if ( ! $w ) {
+						continue 2;
+					}
+					$app['href'] = $w['href'];
+					$app['sub']  = $w['text'];
+					$app['new']  = $w['new'];
+					$app['cc']   = self::is_cc( $w['href'] );
+					break;
 				case 'link':
 					if ( ! $row['url'] ) {
 						continue 2;
@@ -191,6 +212,7 @@ class CHS_Frontend {
 					$app['cc']   = true;
 			}
 
+			$all[] = $app;
 			if ( 'dock' === $row['place'] ) {
 				$dock[] = $app;
 			} else {
@@ -204,6 +226,7 @@ class CHS_Frontend {
 		}
 
 		return array(
+			'all'       => $all,
 			'grid'      => $grid,
 			'dock'      => $dock,
 			'events'    => $events,
@@ -237,9 +260,10 @@ class CHS_Frontend {
 	 */
 	public static function app( $a ) {
 		$style = sprintf( '--c:%s;--g:%s', $a['color'], $a['glyph'] );
+		$badge = $a['new'] ? '<span class="badge"><span class="sr-only">' . esc_html__( 'New', 'comms-church-links' ) . '</span></span>' : '';
 		$tile  = 'today' === $a['icon']
 			? '<span class="tile cal" style="' . esc_attr( $style ) . '" aria-hidden="true"><span class="cal-dow" data-dow></span><span class="cal-day" data-day></span></span>'
-			: '<span class="tile" style="' . esc_attr( $style ) . '" aria-hidden="true">' . chs_icon_svg( $a['icon'] ) . '</span>';
+			: '<span class="tile" style="' . esc_attr( $style ) . '">' . chs_icon_svg( $a['icon'] ) . $badge . '</span>';
 		$label = '<span class="app-label">' . esc_html( $a['label'] ) . '</span>';
 
 		if ( $a['sheet'] ) {

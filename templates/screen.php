@@ -2,7 +2,7 @@
 /**
  * The home screen page. Variables: $s (settings), $d (built data), $embed (bool).
  *
- * @package ChurchHomeScreen
+ * @package ChurchLinks
  */
 
 defined( 'ABSPATH' ) || exit;
@@ -16,12 +16,12 @@ $chs_config   = array(
 	'weekdays' => array_values( $d['weekdays'] ),
 	'ccModal'  => (bool) $s['cc_modal'] && $d['cc'],
 	'i18n'     => array(
-		'today'    => __( 'Today', 'comms-church-home-screen' ),
-		'tomorrow' => __( 'Tomorrow', 'comms-church-home-screen' ),
+		'today'    => __( 'Today', 'comms-church-links' ),
+		'tomorrow' => __( 'Tomorrow', 'comms-church-links' ),
 		/* translators: 1: service name, 2: "today"/"tomorrow"/weekday, 3: time */
-		'note'     => __( '%1$s %2$s at %3$s', 'comms-church-home-screen' ),
-		'copied'   => __( 'Copied', 'comms-church-home-screen' ),
-		'selected' => __( 'Selected. Copy it from here.', 'comms-church-home-screen' ),
+		'note'     => __( '%1$s %2$s at %3$s', 'comms-church-links' ),
+		'copied'   => __( 'Copied', 'comms-church-links' ),
+		'selected' => __( 'Selected. Copy it from here.', 'comms-church-links' ),
 	),
 );
 ?><!doctype html>
@@ -92,7 +92,7 @@ $chs_config   = array(
 	<div class="veil"></div>
 
 	<div class="status">
-		<button class="status-time" id="statusTime" type="button" tabindex="-1" aria-label="<?php esc_attr_e( 'Lock screen', 'comms-church-home-screen' ); ?>"></button>
+		<button class="status-time" id="statusTime" type="button" tabindex="-1" aria-label="<?php esc_attr_e( 'Lock screen', 'comms-church-links' ); ?>"></button>
 		<div class="status-icons" aria-hidden="true">
 			<svg viewBox="0 0 18 12"><rect x="0" y="8" width="3" height="4" rx="1"/><rect x="5" y="5.5" width="3" height="6.5" rx="1"/><rect x="10" y="3" width="3" height="9" rx="1"/><rect x="15" y="0" width="3" height="12" rx="1"/></svg>
 			<svg viewBox="0 0 16 12"><path d="M8 11.5 5.6 9a3.4 3.4 0 0 1 4.8 0zM3.4 6.8a6.5 6.5 0 0 1 9.2 0l-1.5 1.5a4.4 4.4 0 0 0-6.2 0zM1 4.4a9.9 9.9 0 0 1 14 0l-1.5 1.5a7.8 7.8 0 0 0-11 0z"/></svg>
@@ -119,7 +119,7 @@ $chs_config   = array(
 			<?php endif; ?>
 		</div>
 
-		<nav class="apps" aria-label="<?php esc_attr_e( 'Church links', 'comms-church-home-screen' ); ?>">
+		<nav class="apps" aria-label="<?php esc_attr_e( 'Church links', 'comms-church-links' ); ?>">
 			<?php
 			foreach ( $d['grid'] as $chs_app ) {
 				CHS_Frontend::app( $chs_app );
@@ -128,7 +128,7 @@ $chs_config   = array(
 		</nav>
 
 		<?php if ( $d['dock'] ) : ?>
-		<nav class="dock" aria-label="<?php esc_attr_e( 'Quick links', 'comms-church-home-screen' ); ?>" style="--n:<?php echo (int) count( $d['dock'] ); ?>">
+		<nav class="dock" aria-label="<?php esc_attr_e( 'Quick links', 'comms-church-links' ); ?>" style="--n:<?php echo (int) count( $d['dock'] ); ?>">
 			<?php
 			foreach ( $d['dock'] as $chs_app ) {
 				CHS_Frontend::app( $chs_app );
@@ -138,7 +138,7 @@ $chs_config   = array(
 		<?php endif; ?>
 	</main>
 
-	<section class="lock" id="lock" aria-label="<?php esc_attr_e( 'Lock screen', 'comms-church-home-screen' ); ?>">
+	<section class="lock" id="lock" aria-label="<?php esc_attr_e( 'Lock screen', 'comms-church-links' ); ?>">
 		<div class="lock-inner">
 			<div class="lock-date" id="lockDate"></div>
 			<div class="lock-time" id="lockTime"></div>
@@ -153,7 +153,7 @@ $chs_config   = array(
 							<?php echo chs_icon_svg( 'church' ); // phpcs:ignore WordPress.Security.EscapeOutput -- fixed icon library. ?>
 						<?php endif; ?>
 					</span>
-					<div class="note-head"><span><?php echo esc_html( $d['short'] ); ?></span><span><?php esc_html_e( 'now', 'comms-church-home-screen' ); ?></span></div>
+					<div class="note-head"><span><?php echo esc_html( $d['short'] ); ?></span><span><?php esc_html_e( 'now', 'comms-church-links' ); ?></span></div>
 					<div class="note-title" data-svc="note"></div>
 					<?php if ( $s['note_body'] ) : ?>
 						<div class="note-body"><?php echo esc_html( $s['note_body'] ); ?></div>
@@ -163,7 +163,7 @@ $chs_config   = array(
 				<?php if ( $chs_next_ev ) : ?>
 				<div class="note">
 					<span class="note-icon cal-note" aria-hidden="true"><?php echo chs_icon_svg( 'calendar' ); // phpcs:ignore WordPress.Security.EscapeOutput -- fixed icon library. ?></span>
-					<div class="note-head"><span><?php esc_html_e( 'Events', 'comms-church-home-screen' ); ?></span><span><?php echo esc_html( wp_date( 'M j', $chs_next_ev['start'] ) ); ?></span></div>
+					<div class="note-head"><span><?php esc_html_e( 'Events', 'comms-church-links' ); ?></span><span><?php echo esc_html( wp_date( 'M j', $chs_next_ev['start'] ) ); ?></span></div>
 					<div class="note-title"><?php echo esc_html( $chs_next_ev['title'] ); ?></div>
 					<div class="note-body"><?php echo esc_html( $chs_next_ev['all_day'] ? wp_date( 'l', $chs_next_ev['start'] ) : wp_date( 'l, ' . $chs_time_fmt, $chs_next_ev['start'] ) ); ?></div>
 				</div>
@@ -171,7 +171,7 @@ $chs_config   = array(
 			</div>
 			<button class="unlock-hint" id="unlockBtn" type="button">
 				<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 14l6-6 6 6"/></svg>
-				<?php esc_html_e( 'Swipe up to open', 'comms-church-home-screen' ); ?>
+				<?php esc_html_e( 'Swipe up to open', 'comms-church-links' ); ?>
 			</button>
 		</div>
 	</section>
@@ -182,109 +182,28 @@ $chs_config   = array(
 				<div class="sheet-eyebrow" id="sheetEyebrow"></div>
 				<h2 class="sheet-title" id="sheetTitle"></h2>
 			</div>
-			<button class="done" id="doneBtn" type="button"><?php esc_html_e( 'Done', 'comms-church-home-screen' ); ?></button>
+			<button class="done" id="doneBtn" type="button"><?php esc_html_e( 'Done', 'comms-church-links' ); ?></button>
 		</header>
 		<div class="sheet-body" id="sheetBody"></div>
 	</section>
 
 	<div class="toast" id="toast" role="status" aria-live="polite"></div>
-	<button class="homebar" id="homebar" type="button" aria-label="<?php esc_attr_e( 'Go to home screen', 'comms-church-home-screen' ); ?>"></button>
+	<button class="homebar" id="homebar" type="button" aria-label="<?php esc_attr_e( 'Go to home screen', 'comms-church-links' ); ?>"></button>
 </div>
 </div>
 
-<template id="sheet-visit" data-eyebrow="<?php esc_attr_e( 'Plan a visit', 'comms-church-home-screen' ); ?>" data-title="<?php esc_attr_e( "We'd love to meet you", 'comms-church-home-screen' ); ?>">
-	<?php if ( $s['services'] ) : ?>
-	<div class="card">
-		<span class="label"><?php echo esc_html( _n( 'Service', 'Services', count( $s['services'] ), 'comms-church-home-screen' ) ); ?></span>
-		<ul class="services">
-			<?php foreach ( $s['services'] as $chs_svc ) : ?>
-			<li><span class="svc-day"><?php echo esc_html( $d['weekdays'][ (int) $chs_svc['day'] ] ); ?></span><span class="svc-time"><?php echo esc_html( $chs_svc['time'] ); ?></span><span class="svc-name"><?php echo esc_html( $chs_svc['label'] ); ?></span></li>
-			<?php endforeach; ?>
-		</ul>
-	</div>
-	<?php endif; ?>
-	<?php if ( $s['address'] || $s['location'] ) : ?>
-	<div class="card">
-		<span class="label"><?php esc_html_e( 'Where', 'comms-church-home-screen' ); ?></span>
-		<strong><?php echo esc_html( $s['church_name'] ); ?></strong>
-		<span class="muted"><?php echo esc_html( $s['address'] ? $s['address'] : $s['location'] ); ?></span>
-	</div>
-	<?php endif; ?>
-	<?php if ( $d['maps'] ) : ?>
-		<a class="btn<?php echo $s['visit_url'] ? ' secondary' : ''; ?>" href="<?php echo esc_url( $d['maps'] ); ?>" target="_blank" rel="noopener"><?php esc_html_e( 'Get directions', 'comms-church-home-screen' ); ?></a>
-	<?php endif; ?>
-	<?php if ( $s['visit_url'] ) : ?>
-		<a class="btn" href="<?php echo esc_url( $s['visit_url'] ); ?>" target="_blank" rel="noopener"<?php echo $d['visit_cc'] ? ' data-cc' : ''; ?>><?php esc_html_e( 'Plan your visit', 'comms-church-home-screen' ); ?></a>
-	<?php endif; ?>
-	<?php if ( $d['expect'] ) : ?>
-	<div class="card">
-		<span class="label"><?php esc_html_e( 'What to expect', 'comms-church-home-screen' ); ?></span>
-		<ul class="expect">
-			<?php foreach ( $d['expect'] as $chs_line ) : ?>
-				<li><?php echo esc_html( $chs_line ); ?></li>
-			<?php endforeach; ?>
-		</ul>
-	</div>
-	<?php endif; ?>
+<template id="sheet-visit" data-eyebrow="<?php esc_attr_e( 'Plan a visit', 'comms-church-links' ); ?>" data-title="<?php esc_attr_e( "We'd love to meet you", 'comms-church-links' ); ?>">
+	<?php include CHS_DIR . 'templates/parts/visit.php'; ?>
 </template>
 
 <?php if ( $d['has_feed'] ) : ?>
-<template id="sheet-events" data-eyebrow="<?php esc_attr_e( 'Events', 'comms-church-home-screen' ); ?>" data-title="<?php esc_attr_e( 'Coming up', 'comms-church-home-screen' ); ?>">
-	<?php if ( $d['events'] ) : ?>
-	<ul class="rows">
-		<?php
-		foreach ( $d['events'] as $chs_ev ) :
-			$chs_meta = $chs_ev['all_day'] ? wp_date( 'l', $chs_ev['start'] ) . ' · ' . __( 'All day', 'comms-church-home-screen' ) : wp_date( 'l, ' . $chs_time_fmt, $chs_ev['start'] );
-			if ( $chs_ev['location'] ) {
-				$chs_meta .= ' · ' . $chs_ev['location'];
-			}
-			$chs_tag = $chs_ev['url'] ? 'a' : 'div';
-			?>
-		<li>
-			<<?php echo esc_html( $chs_tag ); ?> class="ev"<?php echo $chs_ev['url'] ? ' href="' . esc_url( $chs_ev['url'] ) . '" target="_blank" rel="noopener"' . ( CHS_Frontend::is_cc( $chs_ev['url'] ) ? ' data-cc' : '' ) : ''; ?>>
-				<span class="datebox"><span><?php echo esc_html( wp_date( 'M', $chs_ev['start'] ) ); ?></span><b><?php echo esc_html( wp_date( 'j', $chs_ev['start'] ) ); ?></b></span>
-				<span class="ev-text"><span class="ev-title"><?php echo esc_html( $chs_ev['title'] ); ?></span><span class="ev-meta"><?php echo esc_html( $chs_meta ); ?></span></span>
-			</<?php echo esc_html( $chs_tag ); ?>>
-		</li>
-		<?php endforeach; ?>
-	</ul>
-	<?php else : ?>
-	<div class="card empty"><strong><?php esc_html_e( 'Nothing on the calendar right now', 'comms-church-home-screen' ); ?></strong><span class="muted"><?php esc_html_e( 'Check back soon for upcoming events.', 'comms-church-home-screen' ); ?></span></div>
-	<?php endif; ?>
-	<?php if ( $d['cc'] ) : ?>
-		<a class="btn secondary" href="<?php echo esc_url( $d['cc'] . '/calendar' ); ?>" target="_blank" rel="noopener" data-cc><?php esc_html_e( 'See the full calendar', 'comms-church-home-screen' ); ?></a>
-	<?php endif; ?>
+<template id="sheet-events" data-eyebrow="<?php esc_attr_e( 'Events', 'comms-church-links' ); ?>" data-title="<?php esc_attr_e( 'Coming up', 'comms-church-links' ); ?>">
+	<?php include CHS_DIR . 'templates/parts/events.php'; ?>
 </template>
 <?php endif; ?>
 
-<template id="sheet-contact" data-eyebrow="<?php esc_attr_e( 'Contact', 'comms-church-home-screen' ); ?>" data-title="<?php esc_attr_e( 'Get in touch', 'comms-church-home-screen' ); ?>">
-	<?php if ( $s['phone'] ) : ?>
-	<div class="card">
-		<span class="label"><?php esc_html_e( 'Phone', 'comms-church-home-screen' ); ?></span>
-		<div class="copy-row"><span class="val"><?php echo esc_html( $s['phone'] ); ?></span><button class="copy" type="button" data-copy="<?php echo esc_attr( $s['phone'] ); ?>"><?php esc_html_e( 'Copy', 'comms-church-home-screen' ); ?></button></div>
-	</div>
-	<?php endif; ?>
-	<?php if ( $s['email'] ) : ?>
-	<div class="card">
-		<span class="label"><?php esc_html_e( 'Email', 'comms-church-home-screen' ); ?></span>
-		<div class="copy-row"><span class="val"><?php echo esc_html( $s['email'] ); ?></span><button class="copy" type="button" data-copy="<?php echo esc_attr( $s['email'] ); ?>"><?php esc_html_e( 'Copy', 'comms-church-home-screen' ); ?></button></div>
-	</div>
-	<?php endif; ?>
-	<div class="btn-row">
-		<?php if ( $s['phone'] ) : ?>
-			<a class="btn" href="<?php echo esc_url( 'tel:' . preg_replace( '/[^\d+]/', '', $s['phone'] ), array( 'tel' ) ); ?>"><?php esc_html_e( 'Call', 'comms-church-home-screen' ); ?></a>
-		<?php endif; ?>
-		<?php if ( $s['email'] ) : ?>
-			<a class="btn" href="<?php echo esc_url( 'mailto:' . $s['email'], array( 'mailto' ) ); ?>"><?php esc_html_e( 'Email', 'comms-church-home-screen' ); ?></a>
-		<?php endif; ?>
-	</div>
-	<?php if ( $s['address'] && $d['maps'] ) : ?>
-	<div class="card">
-		<span class="label"><?php esc_html_e( 'Address', 'comms-church-home-screen' ); ?></span>
-		<span><?php echo esc_html( $s['address'] ); ?></span>
-		<a class="link" href="<?php echo esc_url( $d['maps'] ); ?>" target="_blank" rel="noopener"><?php esc_html_e( 'Open in maps', 'comms-church-home-screen' ); ?></a>
-	</div>
-	<?php endif; ?>
+<template id="sheet-contact" data-eyebrow="<?php esc_attr_e( 'Contact', 'comms-church-links' ); ?>" data-title="<?php esc_attr_e( 'Get in touch', 'comms-church-links' ); ?>">
+	<?php include CHS_DIR . 'templates/parts/contact.php'; ?>
 </template>
 
 <script>window.CHS = <?php echo wp_json_encode( $chs_config ); ?>;</script>
