@@ -801,6 +801,13 @@ class CHS_Scanner {
 		if ( 'none' !== $s['events_source'] ) {
 			return;
 		}
+		// A Planning Center key from another comms.church plugin: list exactly what Church Center shows.
+		$cred = CHS_Events::pco_credentials( $s );
+		if ( $cred ) {
+			/* translators: %s: plugin name */
+			self::add( $f, 'events', __( 'Event list', 'comms-church-home-screen' ), __( 'Planning Center: the events you show in Church Center', 'comms-church-home-screen' ), array( 'set' => array( 'events_source' => 'pco' ) ), sprintf( __( 'Uses the Planning Center connection from %s.', 'comms-church-home-screen' ), $cred['from'] ? $cred['from'] : __( 'these settings', 'comms-church-home-screen' ) ) );
+			return;
+		}
 		if ( function_exists( 'tribe_get_events' ) ) {
 			self::add( $f, 'events', __( 'Event list', 'comms-church-home-screen' ), __( 'The Events Calendar on this site', 'comms-church-home-screen' ), array( 'set' => array( 'events_source' => 'tec' ) ), __( 'Shows upcoming events in the Events app and on the lock screen.', 'comms-church-home-screen' ) );
 			return;

@@ -18,7 +18,7 @@ Church Home Screen gives your church a single link that looks and works like a p
 * Home screen with a service-time widget, an optional Bible verse widget, an app grid and a dock.
 * Church Center built in: enter your Church Center address and turn on Giving, Groups, Sign-ups, Calendar, Church Center Home and a "Get the App" button that goes to the right app store.
 * On phones, Church Center links open the Church Center app when it is installed. On computers they can open in Church Center's own pop-up.
-* Events from a calendar feed (iCal from Planning Center Calendar, Google Calendar and others) or from The Events Calendar plugin.
+* Events straight from Planning Center (only the ones you show in Church Center), from a calendar feed (iCal from Google Calendar and others) or from The Events Calendar plugin.
 * Plan a Visit and Contact panels built from your settings.
 * Three wallpapers: sunrise over the hills (with an optional church on the hill), a brand-color gradient, or your own photo.
 * Visitors can add it to their phone's home screen; your site icon becomes the app icon.
@@ -35,11 +35,14 @@ The page lives at yoursite.org/links by default. Use the [church_home_screen] sh
 
 == Frequently Asked Questions ==
 
-= Where do I find my calendar feed link? =
-In Planning Center Calendar, share your published calendar and copy its iCal / subscribe link. Any standard .ics feed works, including Google Calendar's public iCal address.
+= How do I show events from Planning Center? =
+Choose "Planning Center: the events you show in Church Center" under Events. If the Comms.Church PCO plugin is connected, there is nothing else to enter. Otherwise create a Personal Access Token at api.planningcenteronline.com and paste its Application ID and Secret. Only events marked to show in Church Center appear, with the place name but never the street address.
+
+= Can I use my Planning Center Calendar iCal link instead? =
+We don't recommend it. That link is usually your whole calendar, including staff meetings and home addresses, and anyone who has it can read it. Use the Planning Center option above. Calendar feeds are fine for public calendars such as Google Calendar's public iCal address.
 
 = Does this need a Planning Center API key? =
-No. Church Center links and calendar feeds are public, so nothing needs to be authorized.
+Only for the Planning Center events list. Church Center links (Give, Groups, Sign-ups and the rest) are public and need nothing.
 
 = Can I turn off Google Fonts? =
 Yes: add_filter( 'chs_use_google_fonts', '__return_false' );

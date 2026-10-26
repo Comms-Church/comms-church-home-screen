@@ -133,6 +133,8 @@ class CHS_Settings {
 			'cc_modal'        => 1,
 			'events_source'   => 'none',
 			'ics_url'         => '',
+			'pco_app_id'      => '',
+			'pco_secret'      => '',
 			'events_count'    => 5,
 			'apps'            => self::default_apps(),
 		);
@@ -282,10 +284,20 @@ class CHS_Settings {
 		$out['cc_subdomain'] = self::clean_subdomain( isset( $in['cc_subdomain'] ) ? $in['cc_subdomain'] : '' );
 
 		$source               = isset( $in['events_source'] ) ? $in['events_source'] : 'none';
-		$out['events_source'] = in_array( $source, array( 'none', 'ics', 'tec' ), true ) ? $source : 'none';
+		$out['events_source'] = in_array( $source, array( 'none', 'pco', 'ics', 'tec' ), true ) ? $source : 'none';
 		$ics                  = isset( $in['ics_url'] ) ? trim( $in['ics_url'] ) : '';
 		$ics                  = preg_replace( '#^webcals?://#i', 'https://', $ics );
 		$out['ics_url']       = esc_url_raw( $ics, array( 'http', 'https' ) );
+		// Planning Center key. The secret is never printed back into the form, so a blank
+		// field keeps the saved one; "clear" removes both.
+		$old                  = get_option( self::OPTION, array() );
+		$out['pco_app_id']    = isset( $in['pco_app_id'] ) ? sanitize_text_field( $in['pco_app_id'] ) : '';
+		$secret               = isset( $in['pco_secret'] ) ? trim( sanitize_text_field( $in['pco_secret'] ) ) : '';
+		$out['pco_secret']    = '' !== $secret ? $secret : ( isset( $old['pco_secret'] ) ? $old['pco_secret'] : '' );
+		if ( ! empty( $in['pco_clear'] ) || '' === $out['pco_app_id'] ) {
+			$out['pco_app_id'] = '';
+			$out['pco_secret'] = '';
+		}
 		$out['events_count']  = min( 10, max( 1, isset( $in['events_count'] ) ? (int) $in['events_count'] : 5 ) );
 
 		$out['apps'] = array();
@@ -321,6 +333,10 @@ class CHS_Settings {
 		}
 
 		delete_transient( CHS_Events::CACHE );
+		if ( 'pco' === $out['events_source'] ) {
+			// Fetch now so the settings page can say right away whether the key works.
+			CHS_Events::get( wp_parse_args( $out, self::defaults() ) );
+		}
 		return $out;
 	}
 
@@ -477,9 +493,11 @@ class CHS_Settings {
 					<h2><?php esc_html_e( 'Events', 'comms-church-home-screen' ); ?></h2>
 					<fieldset class="chs-radios">
 						<label><input type="radio" name="<?php echo esc_attr( $o ); ?>[events_source]" value="none" <?php checked( $s['events_source'], 'none' ); ?>> <?php esc_html_e( 'No event list (the Events app links to your Church Center calendar)', 'comms-church-home-screen' ); ?></label>
-						<label><input type="radio" name="<?php echo esc_attr( $o ); ?>[events_source]" value="ics" <?php checked( $s['events_source'], 'ics' ); ?>> <?php esc_html_e( 'Calendar feed (iCal link from Planning Center Calendar, Google Calendar and others)', 'comms-church-home-screen' ); ?></label>
+						<label><input type="radio" name="<?php echo esc_attr( $o ); ?>[events_source]" value="pco" <?php checked( $s['events_source'], 'pco' ); ?>> <?php esc_html_e( 'Planning Center: the events you show in Church Center', 'comms-church-home-screen' ); ?></label>
+						<label><input type="radio" name="<?php echo esc_attr( $o ); ?>[events_source]" value="ics" <?php checked( $s['events_source'], 'ics' ); ?>> <?php esc_html_e( 'Calendar feed (a public iCal link, such as Google Calendar\'s)', 'comms-church-home-screen' ); ?></label>
 						<label><input type="radio" name="<?php echo esc_attr( $o ); ?>[events_source]" value="tec" <?php checked( $s['events_source'], 'tec' ); ?> <?php disabled( ! $tec ); ?>> <?php esc_html_e( 'The Events Calendar plugin on this site', 'comms-church-home-screen' ); ?><?php echo $tec ? '' : ' <em>' . esc_html__( '(not installed)', 'comms-church-home-screen' ) . '</em>'; ?></label>
 					</fieldset>
+					<?php self::pco_fields( $s ); ?>
 					<div class="chs-grid">
 						<?php
 						self::text( 'ics_url', __( 'Calendar feed link', 'comms-church-home-screen' ), $s, __( 'Starts with webcal:// or https:// and usually ends in .ics. Refreshed every hour.', 'comms-church-home-screen' ), 'url' );
@@ -629,6 +647,52 @@ class CHS_Settings {
 				</form>
 			<?php endif; ?>
 		</section>
+		<?php
+	}
+
+	/**
+	 * Planning Center key fields and how the last fetch went.
+	 *
+	 * @param array $s Settings.
+	 */
+	private static function pco_fields( $s ) {
+		$o      = self::OPTION;
+		$own    = ! empty( $s['pco_app_id'] ) && ! empty( $s['pco_secret'] );
+		$cred   = CHS_Events::pco_credentials( $s );
+		$status = get_option( CHS_Events::STATUS );
+		?>
+		<div class="chs-pco">
+			<?php if ( $cred && $cred['from'] ) : ?>
+				<p class="description">
+					<?php
+					/* translators: %s: plugin name */
+					echo esc_html( sprintf( __( 'Uses the Planning Center connection from %s. Enter a key below only to use a different one.', 'comms-church-home-screen' ), $cred['from'] ) );
+					?>
+				</p>
+			<?php else : ?>
+				<p class="description">
+					<?php esc_html_e( 'Create a Personal Access Token at api.planningcenteronline.com (Personal Access Tokens → New) and paste its Application ID and Secret here. Only events marked to show in Church Center appear, and only the place name, never the street address.', 'comms-church-home-screen' ); ?>
+				</p>
+			<?php endif; ?>
+			<div class="chs-grid">
+				<?php self::text( 'pco_app_id', __( 'Planning Center Application ID', 'comms-church-home-screen' ), $s ); ?>
+				<label class="chs-field">
+					<span><?php esc_html_e( 'Planning Center Secret', 'comms-church-home-screen' ); ?></span>
+					<input type="password" name="<?php echo esc_attr( $o . '[pco_secret]' ); ?>" value="" autocomplete="new-password" placeholder="<?php echo $own ? esc_attr__( 'Saved. Leave blank to keep it.', 'comms-church-home-screen' ) : ''; ?>">
+				</label>
+			</div>
+			<?php if ( $own ) : ?>
+				<label><input type="checkbox" name="<?php echo esc_attr( $o ); ?>[pco_clear]" value="1"> <?php esc_html_e( 'Remove this key', 'comms-church-home-screen' ); ?></label>
+			<?php endif; ?>
+			<?php if ( 'pco' === $s['events_source'] && is_array( $status ) ) : ?>
+				<p class="chs-pco-status <?php echo $status['ok'] ? 'is-ok' : 'is-error'; ?>">
+					<?php
+					/* translators: 1: status message, 2: time ago */
+					echo esc_html( sprintf( __( '%1$s Checked %2$s ago.', 'comms-church-home-screen' ), $status['msg'], human_time_diff( $status['time'] ) ) );
+					?>
+				</p>
+			<?php endif; ?>
+		</div>
 		<?php
 	}
 

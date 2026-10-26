@@ -12,7 +12,7 @@ Current version: 0.2.0. It was built and tested in a Claude cloud session on 202
 comms-church-home-screen.php      Bootstrap, constants (CHS_VERSION etc.), hooks
 includes/icons.php                27-icon SVG library, chs_icon_svg(), chs_glyph_color()
 includes/class-chs-settings.php   Option schema + defaults, sanitize(), admin page, scan review screen, welcome notice
-includes/class-chs-events.php     Events from iCal feed (own RRULE parser, 1h transient cache) or The Events Calendar
+includes/class-chs-events.php     Events from Planning Center (Church Center events), an iCal feed (own RRULE parser) or The Events Calendar; 1h transient cache
 includes/class-chs-frontend.php   Rewrite route (/links by default), standalone render, [church_home_screen] shortcode (iframe), build() resolves settings into apps
 includes/class-chs-scanner.php    "Auto-fill from your site": scan() returns findings, apply() saves only checked ones
 includes/class-chs-updater.php    GitHub Releases updater (admin only), modeled on the groups plugin's
@@ -33,7 +33,12 @@ tests/                            Playwright smoke suite + Playground blueprint 
   - Phones get plain churchcenter.com links, which open the Church Center app through iOS Universal Links and Android App Links.
   - Desktop (min-width 721px plus hover) adds `data-open-in-church-center-modal="true"` and loads `https://js.churchcenter.com/modal/v1`. This is optional via the `cc_modal` setting.
   - Store links: App Store id1357742931, Play `com.ministrycentered.churchcenter`.
-- No Planning Center API or keys. Events come from the public iCal feed, or from TEC (pairs with our comms-church-pco-tec plugin).
+- Events sources (2026-10-26: the Planning Center one replaced "no API keys"):
+  - **Planning Center** (`pco`): only events with `visible_in_church_center` and `approval_status` A, i.e. what the church's Church Center calendar shows. A church's iCal "subscribe" link is its whole calendar (staff meetings, home addresses), and Church Center publishes no feed of its own; its `/~ccapi/` endpoint 401s from a server. Fields were checked against GCC's live account: `Event.visible_in_church_center` is queryable; `EventInstance` carries `starts_at`, `all_day_event`, `location`, `church_center_url`.
+  - One request for the visible events, then one per event for its next 10 dates (instances can't be filtered by event). GCC: 6 visible of 4,136 events → 7 requests, under 1 s. Capped at 40 events.
+  - Location is "Name - full address" in Planning Center; only the name is shown, like Church Center. A bare street address is dropped.
+  - Key: the one entered in settings, else `ccpco_app_id`/`ccpco_secret` from comms-church-pco (when active), else pco-tec's `cctec_*` pair. The secret is never printed back into the form. Saving fetches once so the settings page can say whether the key works (`chs_events_status`).
+  - **iCal feed** and **The Events Calendar** (pairs with comms-church-pco-tec) are still there.
 - Scanner:
   - Fetches the homepage plus up to 5 info pages with `wp_remote_get` as a logged-out visitor, so page-builder (Bricks) output is read. Falls back to post content + post meta when the site can't fetch itself.
   - Also reads JSON-LD (Yoast/Rank Math `@graph`), tel:/mailto: links, nav menus, pages, sermon CPT archives, and palettes (theme.json, Kadence `kadence_global_palette`, Bricks `bricks_color_palette`). Bricks palettes come in two shapes: older ones store `hex`, while variable-based ones (our design system) store `raw: var(--…)` plus `light`/`dark`. Both are read.
@@ -55,7 +60,9 @@ tests/                            Playwright smoke suite + Playground blueprint 
 
 - Real Bricks build (testchurch.localhost, 2026-10-26): the first scan missed the church name (no JSON-LD; the header logo said otherwise), the service names (written after the times) and the brand color (variable-based Bricks palette). All three are fixed and covered by the smoke suite's blueprint fixtures.
 
-Not tested: the live Church Center modal script, Google Fonts, a real Planning Center iCal feed, GCCWS staging, multisite.
+- Planning Center source against GCC's live account on testchurch (key from pco-tec): exactly the six Church Center events, no street addresses, every event linked to its Church Center page. The smoke suite fakes the API in Playground (`chs-test-pco.php`): bad key → error on the settings page; hidden, unapproved and staff events never shown.
+
+Not tested: the live Church Center modal script, Google Fonts, a real Planning Center iCal feed in the parser beyond one fetch, multisite.
 
 ## Next steps
 

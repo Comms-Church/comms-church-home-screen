@@ -125,3 +125,45 @@ test('/links renders and swipe up unlocks it', async ({ page }) => {
   await expect(page.locator('#home')).not.toHaveAttribute('inert');
   await expect(page.locator('#home nav.apps')).toBeVisible();
 });
+
+test('Planning Center source lists only Church Center events', async ({ page }) => {
+  // The blueprint's fake API (chs-test-pco.php) stands in for Planning Center.
+  await page.goto(SETTINGS);
+  await page.locator('input[name="chs_settings[events_source]"][value="pco"]').check();
+  await page.locator('input[name="chs_settings[pco_app_id]"]').fill('wrong-id');
+  await page.locator('input[name="chs_settings[pco_secret]"]').fill('wrong-secret');
+  await page.locator('#chs-form').getByRole('button', { name: 'Save changes' }).click();
+  // A bad key says so on the settings page instead of failing silently.
+  await expect(page.locator('.chs-pco-status.is-error')).toContainText('Invalid Application ID or Secret.');
+
+  await page.locator('input[name="chs_settings[pco_app_id]"]').fill('test-app-id');
+  await page.locator('input[name="chs_settings[pco_secret]"]').fill('test-secret');
+  await page.locator('#chs-form').getByRole('button', { name: 'Save changes' }).click();
+  await expect(page.locator('.chs-pco-status.is-ok')).toContainText('1 event is shown in Church Center.');
+  await expectClean(page);
+  // The secret is never printed back into the page.
+  const secret = page.locator('input[name="chs_settings[pco_secret]"]');
+  await expect(secret).toHaveValue('');
+  await expect(secret).toHaveAttribute('placeholder', /Saved/);
+  expect(await page.content()).not.toContain('test-secret');
+
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto('/links/');
+  await expectClean(page);
+  const html = await page.content();
+  expect(html).not.toContain('test-secret');
+  // Lock screen shows the next Church Center event.
+  await expect(page.locator('#lock')).toContainText('Grief Care');
+
+  await page.locator('#unlockBtn').click();
+  await page.locator('#home button[data-open="events"]').click();
+  const sheet = page.locator('#sheet');
+  await expect(sheet).toContainText('Grief Care');
+  // Place name only, like Church Center: no street address.
+  await expect(sheet).toContainText('Fellowship Hall');
+  await expect(sheet).not.toContainText('123 Main');
+  // Only approved events that Church Center shows.
+  await expect(sheet).not.toContainText('Pending Picnic');
+  await expect(sheet).not.toContainText('Elder Meeting');
+  await expect(sheet.locator('a.ev').first()).toHaveAttribute('href', /harborchurch\.churchcenter\.com\/calendar\/event\//);
+});

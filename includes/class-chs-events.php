@@ -1,6 +1,6 @@
 <?php
 /**
- * Upcoming events from a calendar feed (iCal) or The Events Calendar.
+ * Upcoming events from Planning Center (Church Center events), a calendar feed (iCal) or The Events Calendar.
  *
  * @package ChurchHomeScreen
  */
@@ -15,6 +15,8 @@ class CHS_Events {
 	const CACHE  = 'chs_events_cache';
 	const AHEAD  = 180; // Days to look ahead when expanding repeating events.
 	const MAXGEN = 400; // Safety cap on generated occurrences per event.
+	const STATUS = 'chs_events_status';
+	const PCO    = 'https://api.planningcenteronline.com/calendar/v2';
 
 	/**
 	 * Upcoming events, soonest first.
@@ -29,10 +31,20 @@ class CHS_Events {
 			return self::from_tec( $count );
 		}
 
-		if ( 'ics' === $s['events_source'] && $s['ics_url'] ) {
+		$fetch = null;
+		if ( 'pco' === $s['events_source'] ) {
+			$fetch = function () use ( $s ) {
+				return self::from_pco( self::pco_credentials( $s ) );
+			};
+		} elseif ( 'ics' === $s['events_source'] && $s['ics_url'] ) {
+			$fetch = function () use ( $s ) {
+				return self::from_ics( $s['ics_url'] );
+			};
+		}
+		if ( $fetch ) {
 			$events = get_transient( self::CACHE );
 			if ( ! is_array( $events ) ) {
-				$events = self::from_ics( $s['ics_url'] );
+				$events = $fetch();
 				if ( null === $events ) {
 					// Feed unreachable: try again in 10 minutes instead of hammering it.
 					set_transient( self::CACHE, array(), 10 * MINUTE_IN_SECONDS );
@@ -110,6 +122,139 @@ class CHS_Events {
 			);
 		}
 		return $out;
+	}
+
+	/**
+	 * Planning Center API credentials: the ones entered here, else the ones saved by
+	 * Comms.Church PCO, else Comms.Church PCO Events Sync (same key pair, all products).
+	 *
+	 * @param array $s Settings.
+	 * @return array|null app_id, secret, from (plugin name or '').
+	 */
+	public static function pco_credentials( $s ) {
+		if ( ! empty( $s['pco_app_id'] ) && ! empty( $s['pco_secret'] ) ) {
+			return array( 'app_id' => $s['pco_app_id'], 'secret' => $s['pco_secret'], 'from' => '' );
+		}
+		$shared = array(
+			array( 'CCPCO_API', 'ccpco_app_id', 'ccpco_secret', 'Comms.Church PCO' ),
+			array( 'CCTEC_API', 'cctec_app_id', 'cctec_secret', 'Comms.Church PCO Events Sync' ),
+		);
+		foreach ( $shared as $c ) {
+			if ( class_exists( $c[0] ) && get_option( $c[1] ) && get_option( $c[2] ) ) {
+				return array( 'app_id' => (string) get_option( $c[1] ), 'secret' => (string) get_option( $c[2] ), 'from' => $c[3] );
+			}
+		}
+		return null;
+	}
+
+	/**
+	 * Upcoming instances of the events the church shows in Church Center
+	 * (visible_in_church_center and approved), so staff meetings and private
+	 * calendars never reach the public page.
+	 *
+	 * @param array|null $cred From pco_credentials().
+	 * @return array|null Null when Planning Center can't be reached.
+	 */
+	private static function from_pco( $cred ) {
+		if ( ! $cred ) {
+			self::status( false, __( 'No Planning Center API key yet.', 'comms-church-home-screen' ) );
+			return null;
+		}
+		$auth = array( 'Authorization' => 'Basic ' . base64_encode( $cred['app_id'] . ':' . $cred['secret'] ) );
+		$get  = function ( $url ) use ( $auth ) {
+			$res = wp_safe_remote_get( 0 === strpos( $url, 'https://' ) ? $url : self::PCO . $url, array( 'headers' => $auth, 'timeout' => 10 ) );
+			if ( is_wp_error( $res ) ) {
+				return $res;
+			}
+			$body = json_decode( wp_remote_retrieve_body( $res ), true );
+			$code = (int) wp_remote_retrieve_response_code( $res );
+			if ( 200 !== $code || ! is_array( $body ) ) {
+				$msg = isset( $body['errors'][0]['detail'] ) ? $body['errors'][0]['detail'] : ( isset( $body['errors'][0]['title'] ) ? $body['errors'][0]['title'] : '' );
+				/* translators: %d: HTTP status code */
+				return new WP_Error( 'chs_pco', $msg ? $msg : sprintf( __( 'Planning Center answered with error %d.', 'comms-church-home-screen' ), $code ) );
+			}
+			return $body;
+		};
+
+		// Which events Church Center shows. Most churches publish a handful of the
+		// hundreds or thousands on their calendar.
+		$events = array();
+		$url    = '/events?per_page=100&filter=future&where[visible_in_church_center]=true';
+		for ( $page = 0; $url && $page < 5; $page++ ) {
+			$body = $get( $url );
+			if ( is_wp_error( $body ) ) {
+				self::status( false, $body->get_error_message() );
+				return null;
+			}
+			foreach ( $body['data'] as $e ) {
+				if ( isset( $e['attributes']['approval_status'] ) && 'A' === $e['attributes']['approval_status'] ) {
+					$events[ $e['id'] ] = $e['attributes'];
+				}
+			}
+			$url = isset( $body['links']['next'] ) ? $body['links']['next'] : '';
+		}
+
+		// Next few dates of each, one request per event (the instances endpoint can't
+		// filter by event, and paging through every instance is slower for most churches).
+		$out = array();
+		foreach ( array_slice( $events, 0, 40, true ) as $id => $ev ) {
+			$body = $get( '/events/' . rawurlencode( $id ) . '/event_instances?filter=future&order=starts_at&per_page=10' );
+			if ( is_wp_error( $body ) ) {
+				self::status( false, $body->get_error_message() );
+				return null;
+			}
+			foreach ( $body['data'] as $in ) {
+				$a  = $in['attributes'];
+				$ts = isset( $a['starts_at'] ) ? strtotime( $a['starts_at'] ) : false;
+				if ( ! $ts ) {
+					continue;
+				}
+				$out[] = array(
+					'title'    => isset( $a['name'] ) && $a['name'] ? $a['name'] : $ev['name'],
+					'start'    => $ts,
+					'all_day'  => ! empty( $a['all_day_event'] ),
+					'location' => self::place_name( isset( $a['location'] ) ? (string) $a['location'] : '' ),
+					'url'      => isset( $a['church_center_url'] ) ? esc_url_raw( $a['church_center_url'] ) : '',
+				);
+			}
+		}
+		usort(
+			$out,
+			function ( $a, $b ) {
+				return $a['start'] - $b['start'];
+			}
+		);
+		/* translators: %d: number of events */
+		self::status( true, sprintf( _n( '%d event is shown in Church Center.', '%d events are shown in Church Center.', count( $events ), 'comms-church-home-screen' ), count( $events ) ), $cred['from'] );
+		return array_slice( $out, 0, 200 );
+	}
+
+	/**
+	 * Planning Center stores locations as "Name - full address". Show the name only,
+	 * the way Church Center does, so a small group's home address isn't published.
+	 *
+	 * @param string $location Location text.
+	 * @return string
+	 */
+	public static function place_name( $location ) {
+		$parts = explode( ' - ', $location, 2 );
+		$name  = trim( $parts[0] );
+		// A bare street address with no name: leave it out.
+		if ( 1 === count( $parts ) && preg_match( '/^\d/', $name ) ) {
+			return '';
+		}
+		return $name;
+	}
+
+	/**
+	 * Remember how the last Planning Center fetch went, for the settings page.
+	 *
+	 * @param bool   $ok   Worked.
+	 * @param string $msg  Message.
+	 * @param string $from Where the key came from.
+	 */
+	private static function status( $ok, $msg, $from = '' ) {
+		update_option( self::STATUS, array( 'ok' => $ok, 'msg' => $msg, 'from' => $from, 'time' => time() ), false );
 	}
 
 	/**
