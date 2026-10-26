@@ -15,6 +15,18 @@ async function expectClean(page) {
   expect(body).not.toMatch(PHP_ERRORS);
 }
 
+// One row of the scan review: its label, value and whether it starts checked.
+async function expectFinding(review, label, value, checked) {
+  const row = review
+    .locator('.chs-findings li')
+    .filter({ has: review.page().locator('.f-label', { hasText: new RegExp(`^${label}$`) }) })
+    .filter({ hasText: value });
+  await expect(row, `${label} = ${value}`).toHaveCount(1);
+  const box = row.locator('input[type="checkbox"]');
+  if (checked) await expect(box).toBeChecked();
+  else await expect(box).not.toBeChecked();
+}
+
 // The flow is one church's first afternoon with the plugin: activate, open
 // settings (auto-scan), keep the findings, edit, then open the page.
 test.describe.configure({ mode: 'serial' });
@@ -51,6 +63,19 @@ test('first visit to settings scans the site and shows the review', async ({ pag
   await expect(review).toContainText('555-0100');
   await expect(review).toContainText('harborchurch');
   await expect(review.locator('input[name="chs_pick[]"]:checked').first()).toBeVisible();
+
+  // Bricks-style cases from the blueprint's fixture: the header logo's name, the
+  // palette's variable colors, and service names written after the time.
+  await expectFinding(review, 'Church name', 'Harbor Community Church', true);
+  await expectFinding(review, 'Brand color', '#0066ff', true);
+  await expectFinding(review, 'Sunday · Classic gathering', '8:30 AM', true);
+  await expectFinding(review, 'Sunday · Contemporary gathering', '10:45 AM', true);
+  // A specific name before the time still wins; in "11 AM | Bible study 10 AM" the
+  // name belongs to 10 AM; "9:00 & 11:00 AM" share the AM; only main services start checked.
+  await expectFinding(review, 'Sunday · Sunday School', '9:15 AM', false);
+  await expectFinding(review, 'Sunday · Bible Study', '10:00 AM', false);
+  await expectFinding(review, 'Sunday · Worship', '9:00 AM', true);
+  await expectFinding(review, 'Sunday · Worship', '11:00 AM', true);
 
   await page.getByRole('button', { name: 'Use selected' }).click();
   await expect(page.locator('.notice-success')).toContainText(/Filled in \d+ settings? from your site/);

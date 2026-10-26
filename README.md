@@ -36,8 +36,9 @@ tests/                            Playwright smoke suite + Playground blueprint 
 - No Planning Center API or keys. Events come from the public iCal feed, or from TEC (pairs with our comms-church-pco-tec plugin).
 - Scanner:
   - Fetches the homepage plus up to 5 info pages with `wp_remote_get` as a logged-out visitor, so page-builder (Bricks) output is read. Falls back to post content + post meta when the site can't fetch itself.
-  - Also reads JSON-LD (Yoast/Rank Math `@graph`), tel:/mailto: links, nav menus, pages, sermon CPT archives, and palettes (theme.json, Kadence `kadence_global_palette`, Bricks `bricks_color_palette`).
-  - Service-time parsing is the fragile part. It handles "8:30, 10 & 11:30 AM", "9AM + 11AM", "a.m.", and per-time labels ("Sunday School 9:15; Worship 10:30"), and it ignores "Romans 8:28" and "since 1952".
+  - Also reads JSON-LD (Yoast/Rank Math `@graph`), tel:/mailto: links, nav menus, pages, sermon CPT archives, and palettes (theme.json, Kadence `kadence_global_palette`, Bricks `bricks_color_palette`). Bricks palettes come in two shapes: older ones store `hex`, while variable-based ones (our design system) store `raw: var(--…)` plus `light`/`dark`. Both are read.
+  - Church name comes from JSON-LD, then from the homepage's logo/site-title link back home (text or image alt), then `og:site_name`. On Bricks builds the header logo often shows a different name than the WordPress site title.
+  - Service-time parsing is the fragile part. It handles "8:30, 10 & 11:30 AM", "9AM + 11AM", "a.m.", and per-time labels ("Sunday School 9:15; Worship 10:30"), and it ignores "Romans 8:28" and "since 1952". A name written after the time ("9:00 AM · Classic gathering") replaces a generic "Worship" but not a specific name written before the time ("Sunday School 9:15"). Page text runs lines together, so a name after a time only counts when the next time follows the same "time · name" pattern; otherwise "11 AM | Bible study 10 AM" would name the wrong service.
   - Main weekend services come pre-checked; everything else starts unchecked.
 - First visit to Settings → Home Screen auto-scans once (`chs_autoscanned`) when `chs_settings` doesn't exist yet. Activation sets `chs_welcome` for the admin notice.
 - Front-end design: dawn wallpaper SVG with an optional steeple. Fonts are Bricolage Grotesque (display) and Atkinson Hyperlegible (body); turn Google Fonts off with the `chs_use_google_fonts` filter. Inside the phone frame at desktop sizes, full-bleed on phones (≤520px), where the fake status bar and home bar are hidden.
@@ -51,7 +52,9 @@ tests/                            Playwright smoke suite + Playground blueprint 
 - Full admin flow: first-visit scan → review → apply → live page. Settings save, adding apps, changing the path (old path 404s, new one 200s), sanitizing junk input.
 - Front end at 1280px desktop and 390px iPhone: swipe unlock, panels, Church Center modal attribute, the iOS store link swap.
 
-Not tested: the live Church Center modal script, Google Fonts, a real Planning Center iCal feed, a real Bricks site, multisite. The cloud sandbox couldn't reach those hosts.
+- Real Bricks build (testchurch.localhost, 2026-10-26): the first scan missed the church name (no JSON-LD; the header logo said otherwise), the service names (written after the times) and the brand color (variable-based Bricks palette). All three are fixed and covered by the smoke suite's blueprint fixtures.
+
+Not tested: the live Church Center modal script, Google Fonts, a real Planning Center iCal feed, GCCWS staging, multisite.
 
 ## Next steps
 

@@ -3,7 +3,10 @@
   "steps": [
     {
       "step": "setSiteOptions",
-      "options": { "blogname": "Harbor Church", "permalink_structure": "/%postname%/" }
+      "options": {
+        "blogname": "Harbor Church",
+        "permalink_structure": "/%postname%/"
+      }
     },
     {
       "step": "writeFile",
@@ -11,8 +14,17 @@
       "data": "<?php\n// Test fixture only (never shipped): /wp-admin/?chs_test_reset=1 puts the plugin back\n// in its just-activated state, so the first-visit auto-scan can run again on a\n// reused Playground server or a Playwright retry.\nadd_action( 'admin_init', function () {\n\tif ( empty( $_GET['chs_test_reset'] ) || ! current_user_can( 'manage_options' ) ) {\n\t\treturn;\n\t}\n\tdelete_option( 'chs_settings' );\n\tdelete_option( 'chs_autoscanned' );\n\tdelete_transient( 'chs_scan_' . get_current_user_id() );\n\tdelete_option( 'chs_welcome' );\n\tupdate_option( 'chs_flush_rewrite', 1, false );\n\twp_die( 'chs reset', '', array( 'response' => 200 ) );\n} );\n"
     },
     {
+      "step": "writeFile",
+      "path": "/wordpress/wp-content/mu-plugins/chs-test-bricks.php",
+      "data": "<?php\n// Test fixture only (never shipped): mimics a Bricks build, where the header logo\n// shows a different name than the WordPress site title and the palette stores\n// CSS variables with \"light\" values instead of plain hex.\nadd_action( 'wp_body_open', function () {\n\techo '<header><a class=\"brxe-logo cc-header__logo\" href=\"' . esc_url( home_url() ) . '\">Harbor Community Church</a></header>';\n} );\n"
+    },
+    {
       "step": "runPHP",
-      "code": "<?php require_once '/wordpress/wp-load.php'; if ( get_page_by_path( 'plan-a-visit' ) ) { return; } wp_insert_post([ 'post_type' => 'page', 'post_status' => 'publish', 'post_title' => 'Plan a Visit', 'post_name' => 'plan-a-visit', 'post_content' => '<h2>Sunday Worship</h2><p>Join us Sundays at 9:00 &amp; 11:00 AM.</p><p>Call <a href=\"tel:+17175550100\">(717) 555-0100</a> or email <a href=\"mailto:hello@harbor.test\">hello@harbor.test</a>.</p><p><a href=\"https://harborchurch.churchcenter.com/giving\">Give online</a></p>' ]); flush_rewrite_rules();"
+      "code": "<?php require_once '/wordpress/wp-load.php'; if ( get_page_by_path( 'plan-a-visit' ) ) { return; } wp_insert_post([ 'post_type' => 'page', 'post_status' => 'publish', 'post_title' => 'Plan a Visit', 'post_name' => 'plan-a-visit', 'post_content' => '<h2>Sunday Worship</h2><p>Join us Sundays: worship at 9:00 &amp; 11:00 AM | Bible study 10 AM.</p><p>Call <a href=\"tel:+17175550100\">(717) 555-0100</a> or email <a href=\"mailto:hello@harbor.test\">hello@harbor.test</a>.</p><p><a href=\"https://harborchurch.churchcenter.com/giving\">Give online</a></p>' ]); flush_rewrite_rules();"
+    },
+    {
+      "step": "runPHP",
+      "code": "<?php require_once '/wordpress/wp-load.php'; update_option( 'bricks_color_palette', array( array( 'id' => 'a8a9df', 'name' => 'CC Brand', 'colors' => array( array( 'id' => 'b6daf5', 'raw' => 'var(--cc-color-primary)', 'light' => '#0066ff' ), array( 'id' => 'd9719a', 'raw' => 'var(--cc-color-dark)', 'light' => '#0a0a0a' ), array( 'id' => 'd53692', 'raw' => 'var(--cc-color-surface)', 'light' => '#ffffff' ) ) ) ) ); if ( get_page_by_path( 'sunday-gatherings' ) ) { return; } wp_insert_post([ 'post_type' => 'page', 'post_status' => 'publish', 'post_title' => 'Sunday Gatherings', 'post_name' => 'sunday-gatherings', 'post_content' => '<h3>Sundays at Harbor</h3><p>8:30 AM &middot; Classic gathering<br>10:45 AM &middot; Contemporary gathering</p><p>Sunday School 9:15 AM</p>' ]);"
     }
   ]
 }

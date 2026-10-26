@@ -157,7 +157,7 @@ class CHS_Scanner {
 		$org = self::org_from_jsonld( $nodes );
 		$f   = array();
 
-		self::find_details( $f, $s, $org, $links, $texts );
+		self::find_details( $f, $s, $org, $links, $texts, self::site_name( (string) reset( $pages ) ) );
 		self::find_services( $f, $texts );
 		$cc = self::find_church_center( $f, $s, $links );
 		self::find_events( $f, $s, $links, $cc );
@@ -280,6 +280,46 @@ class CHS_Scanner {
 	}
 
 	/**
+	 * The church name the homepage shows visitors: the logo or site-title link
+	 * back to the homepage (its text, or its image's alt text), then og:site_name.
+	 *
+	 * @param string $html Homepage HTML.
+	 * @return string
+	 */
+	private static function site_name( $html ) {
+		$cands = array();
+		if ( preg_match_all( '#<a\b([^>]*)>(.*?)</a>#is', $html, $m, PREG_SET_ORDER ) ) {
+			foreach ( $m as $a ) {
+				if ( ! preg_match( '#href\s*=\s*(["\'])(.*?)\1#is', $a[1], $h ) ) {
+					continue;
+				}
+				$href = untrailingslashit( trim( html_entity_decode( $h[2], ENT_QUOTES ) ) );
+				if ( ! in_array( $href, array( '', untrailingslashit( home_url() ) ), true ) ) {
+					continue;
+				}
+				$logo = preg_match( '#class\s*=\s*(["\'])[^"\']*(logo|site-title|brand)[^"\']*\1#i', $a[1] ) || preg_match( '#rel\s*=\s*(["\'])home\1#i', $a[1] );
+				if ( ! $logo ) {
+					continue;
+				}
+				$cands[] = wp_strip_all_tags( html_entity_decode( $a[2], ENT_QUOTES ) );
+				if ( preg_match( '#<img[^>]+alt\s*=\s*(["\'])(.*?)\1#is', $a[2], $alt ) ) {
+					$cands[] = preg_replace( '/\s+logo$/i', '', html_entity_decode( $alt[2], ENT_QUOTES ) );
+				}
+			}
+		}
+		if ( preg_match( '#<meta[^>]+property=["\']og:site_name["\'][^>]+content=["\']([^"\']+)#i', $html, $og ) ) {
+			$cands[] = html_entity_decode( $og[1], ENT_QUOTES );
+		}
+		foreach ( $cands as $c ) {
+			$c = trim( preg_replace( '/\s+/', ' ', $c ) );
+			if ( strlen( $c ) >= 3 && strlen( $c ) <= 60 && ! preg_match( '/^(home|logo|menu)$/i', $c ) ) {
+				return $c;
+			}
+		}
+		return '';
+	}
+
+	/**
 	 * Walk JSON-LD, including @graph, into a flat list of typed nodes.
 	 *
 	 * @param array $data  Decoded JSON.
@@ -389,11 +429,15 @@ class CHS_Scanner {
 	/**
 	 * Name, phone, email, address.
 	 */
-	private static function find_details( &$f, $s, $org, $links, $texts ) {
+	private static function find_details( &$f, $s, $org, $links, $texts, $site_name = '' ) {
 		$g = 'details';
 
-		if ( ! empty( $org['name'] ) && is_string( $org['name'] ) && $org['name'] !== $s['church_name'] ) {
-			self::add( $f, $g, __( 'Church name', 'comms-church-home-screen' ), $org['name'], array( 'set' => array( 'church_name' => $org['name'] ) ), self::was( $s['church_name'] ) );
+		// Name: structured data, then the name the site header shows visitors
+		// (page builders like Bricks often show a different name than the WordPress site title).
+		$name = ! empty( $org['name'] ) && is_string( $org['name'] ) ? $org['name'] : $site_name;
+		if ( $name && 0 !== strcasecmp( $name, $s['church_name'] ) ) {
+			$note = trim( ( $name === $site_name ? __( 'From the header of your homepage.', 'comms-church-home-screen' ) . ' ' : '' ) . self::was( $s['church_name'] ) );
+			self::add( $f, $g, __( 'Church name', 'comms-church-home-screen' ), $name, array( 'set' => array( 'church_name' => $name ) ), $note );
 		}
 
 		// Phone: structured data, then tel: links, then text.
@@ -507,7 +551,8 @@ class CHS_Scanner {
 	private static function find_services( &$f, $texts ) {
 		$days  = array( 'sunday' => 0, 'monday' => 1, 'tuesday' => 2, 'wednesday' => 3, 'thursday' => 4, 'friday' => 5, 'saturday' => 6 );
 		$dayre = '\b(sunday|monday|tuesday|wednesday|thursday|friday|saturday)s?\b';
-		$found = array();
+		$found   = array();
+		$worship = __( 'Worship', 'comms-church-home-screen' );
 
 		foreach ( $texts as $t ) {
 			$text = preg_replace( '/\b([ap])\.\s?m\.?/i', '$1m', $t['text'] );
@@ -527,18 +572,44 @@ class CHS_Scanner {
 					continue;
 				}
 				$day   = $days[ strtolower( $dm[1][ $i ][0] ) ];
+				// Names written after each time. Page text runs lines together, so in
+				// "11 AM | Bible study 10 AM" the name could belong to either time: only trust
+				// it when the next time follows the same "time · name" pattern.
+				$afters = array();
+				foreach ( $times as $j => $tm ) {
+					$next         = isset( $times[ $j + 1 ] ) ? $times[ $j + 1 ]['pos'] : strlen( $window );
+					$afters[ $j ] = self::trailing_label( substr( $window, $tm['end'], $next - $tm['end'] ) );
+				}
+				foreach ( $afters as $j => $a ) {
+					if ( $a && isset( $times[ $j + 1 ] ) && empty( $afters[ $j + 1 ] ) ) {
+						$afters[ $j ] = null;
+					}
+				}
 				$label = '';
 				$prev  = 0;
-				foreach ( $times as $tm ) {
+				foreach ( $times as $j => $tm ) {
 					// Name each time from the words just before it; "8:30, 10 & 11:30" share one name.
 					$seg   = ( 0 === $prev ? $before . ' ' . $match[0] . ' ' : '' ) . substr( $window, $prev, $tm['pos'] - $prev );
 					$named = self::service_label( $seg, $day, '' );
 					$label = $named ? $named : ( $label ? $label : self::service_label( $before . ' ' . $match[0] . ' ' . $window, $day ) );
 					$prev  = $tm['end'];
-					$time  = $tm['time'];
-					$k = $day . '|' . $time;
+					$kind  = $label;
+					$name  = $label;
+					// The church's own name for it, written after the time ("9:00 AM · Classic gathering"),
+					// beats a generic "Worship" read from a heading like "Sunday Gatherings", but not a
+					// specific name written before the time ("Sunday School 9:15").
+					$after = $afters[ $j ];
+					if ( $after && ( '' === $named || $worship === $named ) ) {
+						$name  = $after['name'];
+						$kind  = self::service_label( $after['name'], $day );
+						$prev  = $tm['end'] + $after['len'];
+					}
+					$time = $tm['time'];
+					$k    = $day . '|' . $time;
 					if ( ! isset( $found[ $k ] ) ) {
-						$found[ $k ] = array( 'day' => $day, 'time' => $time, 'label' => $label, 'score' => 0 );
+						$found[ $k ] = array( 'day' => $day, 'time' => $time, 'label' => $name, 'kind' => $kind, 'score' => 0 );
+					} elseif ( $found[ $k ]['label'] === $found[ $k ]['kind'] && $name !== $kind ) {
+						$found[ $k ]['label'] = $name; // A church's own name beats our generic one.
 					}
 					$found[ $k ]['score'] += $t['weight'];
 				}
@@ -563,7 +634,7 @@ class CHS_Scanner {
 			if ( $n >= 6 ) {
 				break;
 			}
-			$main = in_array( $svc['day'], array( 0, 6 ), true ) && 'Worship' === $svc['label'];
+			$main = in_array( $svc['day'], array( 0, 6 ), true ) && $worship === $svc['kind'];
 			self::add(
 				$f,
 				'services',
@@ -613,6 +684,23 @@ class CHS_Scanner {
 			array_unshift( $out, array( 'time' => $h . ':' . $mm . ' ' . $ap, 'pos' => $m[ $i ][0][1], 'end' => $end ) );
 		}
 		return $out;
+	}
+
+	/**
+	 * A service name written right after a time, set off by a separator:
+	 * "· Classic gathering", "- Traditional Service", ": Sunday School".
+	 * Page text runs block elements together, so the name must end in a service word
+	 * ("gathering", "service"…) to know where it stops.
+	 *
+	 * @param string $text Text between this time and the next one.
+	 * @return array|null name, len (characters consumed).
+	 */
+	private static function trailing_label( $text ) {
+		$kw = '(?:gathering|service|worship|celebration|experience|mass|liturgy|eucharist|school|study|prayer|youth|students?)s?';
+		if ( ! preg_match( '/^\s*[\x{00B7}\x{2022}|:-]\s*((?:[A-Za-z][A-Za-z\'\x{2019}&-]*\s+){0,3}?' . $kw . '(?:\s+' . $kw . ')?)\b/iu', $text, $m ) ) {
+			return null;
+		}
+		return array( 'name' => ucfirst( $m[1] ), 'len' => strlen( $m[0] ) );
 	}
 
 	/**
@@ -882,8 +970,12 @@ class CHS_Scanner {
 		foreach ( (array) get_option( 'bricks_color_palette', array() ) as $pal ) {
 			if ( ! empty( $pal['colors'] ) ) {
 				foreach ( (array) $pal['colors'] as $c ) {
-					if ( ! empty( $c['hex'] ) ) {
-						$cands[] = array( 'hex' => $c['hex'], 'name' => isset( $c['name'] ) ? $c['name'] : '' );
+					// Older palettes store "hex". Variable-based ones store "raw" (var(--brand-primary)
+					// or a hex) plus "light"/"dark" values, and the variable name is the only name.
+					$raw = isset( $c['raw'] ) ? (string) $c['raw'] : '';
+					$hex = ! empty( $c['hex'] ) ? $c['hex'] : ( ! empty( $c['light'] ) ? $c['light'] : ( sanitize_hex_color( $raw ) ? $raw : '' ) );
+					if ( $hex ) {
+						$cands[] = array( 'hex' => $hex, 'name' => ! empty( $c['name'] ) ? $c['name'] : $raw );
 					}
 				}
 			}
