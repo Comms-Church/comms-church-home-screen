@@ -1,0 +1,13 @@
+{
+  "name": "comms-church-home-screen",
+  "private": true,
+  "description": "Phone-style church link page with Church Center built in, for WordPress",
+  "scripts": {
+    "wp": "wp-playground-cli server --auto-mount --login --port 9405 --blueprint tests/blueprint.json",
+    "test": "playwright test --project=smoke"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.61.1",
+    "@wp-playground/cli": "^3.1.45"
+  }
+}

@@ -1,0 +1,97 @@
+// Release smoke suite — green, or no release.
+// Runs against WordPress Playground with the plugin active and a "Plan a Visit"
+// page seeded with service times, a phone number and a Church Center link
+// (tests/blueprint.json). The blueprint's test-only mu-plugin resets the plugin
+// to its just-activated state, so the first-visit scan runs on every pass.
+const { test, expect } = require('@playwright/test');
+
+// PHP problems surface as text in the page body, not HTTP errors.
+const PHP_ERRORS = /Fatal error|Parse error|Warning: |Notice: |Deprecated: /;
+
+const SETTINGS = '/wp-admin/options-general.php?page=church-home-screen';
+
+async function expectClean(page) {
+  const body = await page.locator('body').innerText();
+  expect(body).not.toMatch(PHP_ERRORS);
+}
+
+// The flow is one church's first afternoon with the plugin: activate, open
+// settings (auto-scan), keep the findings, edit, then open the page.
+test.describe.configure({ mode: 'serial' });
+
+test.beforeAll(async ({ browser }) => {
+  const page = await browser.newPage({ storageState: 'test-results/.auth/admin.json' });
+  await page.goto('/wp-admin/?chs_test_reset=1');
+  await expect(page.locator('body')).toContainText('chs reset');
+  await page.close();
+});
+
+test('activation turns the plugin on and points to setup', async ({ page }) => {
+  // Deactivate and reactivate through the UI so the activation hook really runs
+  // (it registers the route and queues the welcome notice).
+  await page.goto('/wp-admin/plugins.php');
+  const row = page.locator('tr[data-plugin="comms-church-home-screen/comms-church-home-screen.php"]');
+  await row.getByRole('link', { name: /^Deactivate/ }).click();
+  await expect(row).toHaveClass(/\binactive\b/);
+  await row.getByRole('link', { name: /^Activate/ }).click();
+  await expect(page.locator('#message')).toContainText('activated');
+  await expectClean(page);
+  await expect(row).toHaveClass(/\bactive\b/);
+  await expect(row.getByRole('link', { name: 'Settings' })).toBeVisible();
+  await expect(row.getByRole('link', { name: 'Check for updates' })).toBeVisible();
+  await expect(page.getByRole('link', { name: 'Set up your home screen' })).toBeVisible();
+});
+
+test('first visit to settings scans the site and shows the review', async ({ page }) => {
+  await page.goto(SETTINGS);
+  await expectClean(page);
+  const review = page.locator('.chs-review');
+  await expect(review).toContainText('We looked through your site to get you started');
+  // The seeded page should give the scanner something in each of these.
+  await expect(review).toContainText('555-0100');
+  await expect(review).toContainText('harborchurch');
+  await expect(review.locator('input[name="chs_pick[]"]:checked').first()).toBeVisible();
+
+  await page.getByRole('button', { name: 'Use selected' }).click();
+  await expect(page.locator('.notice-success')).toContainText(/Filled in \d+ settings? from your site/);
+  await expectClean(page);
+  // The scan runs once; the settings form is what comes up from now on.
+  await expect(page.locator('.chs-review')).toHaveCount(0);
+  await expect(page.locator('#chs-form')).toBeVisible();
+  await expect(page.getByRole('link', { name: 'Set up your home screen' })).toHaveCount(0);
+});
+
+test('settings save and persist', async ({ page }) => {
+  await page.goto(SETTINGS);
+  const name = page.locator('input[name="chs_settings[church_name]"]');
+  await name.fill('Harbor Church Smoke');
+  await page.locator('#chs-form').getByRole('button', { name: 'Save changes' }).click();
+  await expect(page.locator('#setting-error-settings_updated')).toBeVisible();
+  await expectClean(page);
+  await expect(page.locator('input[name="chs_settings[church_name]"]')).toHaveValue('Harbor Church Smoke');
+});
+
+test('/links renders and swipe up unlocks it', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  const res = await page.goto('/links/');
+  expect(res.status()).toBe(200);
+  await expectClean(page);
+
+  const screen = page.locator('#screen');
+  const lock = page.locator('#lock');
+  await expect(lock).toContainText('Harbor Church Smoke');
+  await expect(page.locator('#lockTime')).not.toBeEmpty();
+  await expect(page.locator('#home')).toHaveAttribute('inert', '');
+
+  // Swipe from low on the lock screen to near the top, like a thumb would.
+  const box = await lock.boundingBox();
+  const x = box.x + box.width / 2;
+  await page.mouse.move(x, box.y + box.height * 0.7);
+  await page.mouse.down();
+  await page.mouse.move(x, box.y + box.height * 0.2, { steps: 12 });
+  await page.mouse.up();
+
+  await expect(screen).toHaveClass(/\bunlocked\b/);
+  await expect(page.locator('#home')).not.toHaveAttribute('inert');
+  await expect(page.locator('#home nav.apps')).toBeVisible();
+});
