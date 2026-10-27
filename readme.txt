@@ -1,5 +1,6 @@
 === Church Links ===
 Contributors: commschurch
+Donate link: https://buy.stripe.com/00w5kD8BF21R6SigP62B201
 Tags: church, link in bio, church center, planning center, qr code
 Requires at least: 6.2
 Tested up to: 6.8

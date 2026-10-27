@@ -8,6 +8,10 @@ Renamed from Church Home Screen on 2026-10-26, when the function (scan, link tre
 
 Current version: 0.2.0. It was built and tested in a Claude cloud session on 2026-10-25 against WordPress 6.8+/7.2-beta on SQLite with PHP 8.3.
 
+## Pay what's fair
+
+This plugin is free so churches can spend less on their websites. If you use it in paid work — building or managing church websites for a fee — we ask that you [pay what you think is fair](https://buy.stripe.com/00w5kD8BF21R6SigP62B201). There are no license keys and no checks; it's the honor system. It keeps the plugins maintained and free for everyone else.
+
 ## Layout
 
 ```
