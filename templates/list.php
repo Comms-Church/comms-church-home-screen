@@ -1,6 +1,7 @@
 <?php
 /**
- * The link-list layout (the default). Variables: $s (settings), $d (built data), $embed (bool).
+ * The link-list layout (the default): church header, what's featured in Planning Center,
+ * next service and event, then the links. Variables: $s (settings), $d (built data), $embed (bool).
  *
  * @package ChurchLinks
  */
@@ -8,7 +9,15 @@
 defined( 'ABSPATH' ) || exit;
 
 $chs_desc     = $s['location'] ? sprintf( '%s · %s', $s['church_name'], $s['location'] ) : $s['church_name'];
-$chs_next_ev  = $d['events'] ? $d['events'][0] : null;
+$chs_feat_ids = wp_list_pluck( $d['featured'], 'title' );
+$chs_next_ev  = null;
+foreach ( $d['events'] as $chs_e ) {
+	// Skip one already up top as featured.
+	if ( ! in_array( $chs_e['title'], $chs_feat_ids, true ) ) {
+		$chs_next_ev = $chs_e;
+		break;
+	}
+}
 $chs_time_fmt = get_option( 'time_format', 'g:i a' );
 $chs_fonts    = apply_filters( 'chs_use_google_fonts', true );
 $chs_panels   = array(
@@ -70,6 +79,33 @@ $chs_config   = array(
 			<p class="cl-where"><?php echo esc_html( $s['location'] ); ?></p>
 		<?php endif; ?>
 	</header>
+
+	<?php if ( $d['featured'] ) : ?>
+	<section class="cl-featured" aria-labelledby="cl-featured-h">
+		<h2 class="sr-only" id="cl-featured-h"><?php esc_html_e( 'Happening soon', 'comms-church-links' ); ?></h2>
+		<?php foreach ( $d['featured'] as $chs_f ) : ?>
+			<?php
+			$chs_when = $chs_f['all_day'] ? wp_date( 'l, M j', $chs_f['start'] ) : wp_date( 'l, M j · ' . $chs_time_fmt, $chs_f['start'] );
+			$chs_tag  = $chs_f['url'] ? 'a' : 'div';
+			?>
+			<<?php echo $chs_tag; // phpcs:ignore WordPress.Security.EscapeOutput -- fixed tag. ?> class="cl-feat<?php echo $chs_f['image'] ? ' has-img' : ''; ?>"<?php echo $chs_f['url'] ? ' href="' . esc_url( $chs_f['url'] ) . '" target="_blank" rel="noopener"' . ( $chs_f['cc'] ? ' data-cc' : '' ) : ''; ?>>
+				<?php if ( $chs_f['image'] ) : ?>
+					<img class="cl-feat-img" src="<?php echo esc_url( $chs_f['image'] ); ?>" alt="" loading="lazy">
+				<?php endif; ?>
+				<span class="cl-feat-text">
+					<span class="cl-feat-when"><?php echo esc_html( $chs_when ); ?></span>
+					<span class="cl-feat-title"><?php echo esc_html( $chs_f['title'] ); ?></span>
+					<?php if ( $chs_f['summary'] ) : ?>
+						<span class="cl-feat-sum"><?php echo esc_html( $chs_f['summary'] ); ?></span>
+					<?php endif; ?>
+				</span>
+				<?php if ( $chs_f['url'] ) : ?>
+					<span class="cl-arrow" aria-hidden="true"></span>
+				<?php endif; ?>
+			</<?php echo $chs_tag; // phpcs:ignore WordPress.Security.EscapeOutput -- fixed tag. ?>>
+		<?php endforeach; ?>
+	</section>
+	<?php endif; ?>
 
 	<?php if ( $s['services'] || $chs_next_ev ) : ?>
 	<div class="cl-now">

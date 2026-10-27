@@ -835,14 +835,14 @@ class CHS_Scanner {
 		$g     = 'apps';
 		$added = array();
 
-		// $type 'watch' makes a watched page: the app follows the newest item on it.
+		// $type 'watch' makes a latest-post app: it opens the newest post in that archive.
 		$offer = function ( $label, $icon, $color, $url, $note, $checked, $type = 'link' ) use ( &$f, &$added, $g, $s ) {
 			$key = strtolower( $label );
 			if ( isset( $added[ $key ] ) || ! $url ) {
 				return;
 			}
 			if ( 'watch' === $type ) {
-				$note .= ' ' . __( 'Watched: always links to the newest item on that page.', 'comms-church-links' );
+				$note .= ' ' . __( 'Always opens the newest one.', 'comms-church-links' );
 			}
 			$app = array( 'type' => $type, 'label' => $label, 'icon' => $icon, 'color' => $color, 'url' => esc_url_raw( $url ), 'match' => '', 'place' => 'grid' );
 			if ( self::has_app( $s['apps'], $app ) ) {
@@ -902,7 +902,7 @@ class CHS_Scanner {
 			array( '/^(give|giving|donate|online giving)$/i', __( 'Give', 'comms-church-links' ), 'heart', '#e08a2c', 'nocc' ),
 			array( '/^(groups|small groups|life groups|community groups)$/i', __( 'Groups', 'comms-church-links' ), 'people', '#3b82d6', 'nocc' ),
 			array( '/belief|about us|who we are|our story/i', __( 'About', 'comms-church-links' ), 'info', '#64748b', 'off' ),
-			array( '/bulletin|newsletter/i', __( 'Bulletin', 'comms-church-links' ), 'document', '#5b6474', 'watch' ),
+			array( '/bulletin|newsletter/i', __( 'Bulletin', 'comms-church-links' ), 'document', '#5b6474', '' ),
 		);
 
 		$cands = array();
@@ -948,8 +948,8 @@ class CHS_Scanner {
 				if ( 'nocc' === $r[4] && $cc ) {
 					break; // Church Center already covers this.
 				}
-				// Bulletins, and any archive of posts (a sermon or news archive), are watched.
-				$type = 'watch' === $r[4] || CHS_Watch::post_type_for( $url ) ? 'watch' : 'link';
+				// An archive of posts (a sermon or news archive) links to its newest post.
+				$type = CHS_Watch::post_type_for( $url ) ? 'watch' : 'link';
 				$offer( $r[1], $r[2], $r[3], $url, $c['src'] . ': ' . $c['title'], 'off' !== $r[4], $type );
 				break;
 			}

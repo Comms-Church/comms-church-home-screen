@@ -15,4 +15,6 @@ delete_option( 'chs_events_status' );
 delete_transient( 'chs_events_cache' );
 delete_transient( 'chsupd_release' );
 delete_option( 'chs_watch' );
+delete_option( 'chs_featured_status' );
+delete_transient( 'chs_featured_cache' );
 wp_clear_scheduled_hook( 'chs_watch_daily' );

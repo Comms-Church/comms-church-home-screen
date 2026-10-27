@@ -49,7 +49,7 @@ class CHS_Settings {
 	/**
 	 * App types the church can add. "kind" decides how the app behaves:
 	 * sheet = opens a panel on the screen, cc = Church Center link, link = plain link, app = Church Center app download,
-	 * watch = follows a page and links to the newest item on it (see CHS_Watch).
+	 * watch = opens the newest post in an archive on this site (see CHS_Watch).
 	 *
 	 * @return array
 	 */
@@ -66,7 +66,7 @@ class CHS_Settings {
 			'cc_home'          => array( 'name' => __( 'Church Center: Home', 'comms-church-links' ), 'label' => __( 'Church Center', 'comms-church-links' ), 'icon' => 'church', 'color' => '#2c3372', 'kind' => 'cc', 'path' => '' ),
 			'cc_app'           => array( 'name' => __( 'Church Center: Get the app', 'comms-church-links' ), 'label' => __( 'Get the App', 'comms-church-links' ), 'icon' => 'download', 'color' => '#1c1e33', 'kind' => 'app' ),
 			'link'             => array( 'name' => __( 'Custom link', 'comms-church-links' ), 'label' => __( 'Link', 'comms-church-links' ), 'icon' => 'link', 'color' => '#64748b', 'kind' => 'link' ),
-			'watch'            => array( 'name' => __( 'Watched page (always links to the newest item on it)', 'comms-church-links' ), 'label' => __( 'Bulletin', 'comms-church-links' ), 'icon' => 'document', 'color' => '#5b6474', 'kind' => 'watch' ),
+			'watch'            => array( 'name' => __( 'Latest post (newest sermon, news post…)', 'comms-church-links' ), 'label' => __( 'Latest Sermon', 'comms-church-links' ), 'icon' => 'book', 'color' => '#2c3372', 'kind' => 'watch' ),
 		);
 	}
 
@@ -135,6 +135,7 @@ class CHS_Settings {
 			'brand'           => '#2c3372',
 			'cc_subdomain'    => '',
 			'cc_modal'        => 1,
+			'featured_on'     => 1,
 			'events_source'   => 'none',
 			'ics_url'         => '',
 			'pco_app_id'      => '',
@@ -282,6 +283,7 @@ class CHS_Settings {
 		$out['verse_on'] = empty( $in['verse_on'] ) ? 0 : 1;
 		$out['steeple']  = empty( $in['steeple'] ) ? 0 : 1;
 		$out['cc_modal'] = empty( $in['cc_modal'] ) ? 0 : 1;
+		$out['featured_on'] = empty( $in['featured_on'] ) ? 0 : 1;
 
 		$out['wallpaper']       = isset( $in['wallpaper'] ) && in_array( $in['wallpaper'], array( 'dawn', 'brand', 'image' ), true ) ? $in['wallpaper'] : 'dawn';
 		$out['wallpaper_image'] = isset( $in['wallpaper_image'] ) ? absint( $in['wallpaper_image'] ) : 0;
@@ -344,11 +346,14 @@ class CHS_Settings {
 		}
 
 		delete_transient( CHS_Events::CACHE );
-		// Read watched pages now, so the links page is right the moment settings are saved.
-		CHS_Watch::check_all( wp_parse_args( $out, self::defaults() ) );
+		delete_transient( CHS_Events::FEATURED );
+		// Fetch now so the settings page can say right away whether the key works.
+		$full = wp_parse_args( $out, self::defaults() );
 		if ( 'pco' === $out['events_source'] ) {
-			// Fetch now so the settings page can say right away whether the key works.
-			CHS_Events::get( wp_parse_args( $out, self::defaults() ) );
+			CHS_Events::get( $full );
+		}
+		if ( $out['featured_on'] ) {
+			CHS_Events::featured( $full );
 		}
 		return $out;
 	}
@@ -494,6 +499,16 @@ class CHS_Settings {
 				</section>
 
 				<section class="chs-card">
+					<h2><?php esc_html_e( 'Featured', 'comms-church-links' ); ?></h2>
+					<label class="chs-check">
+						<input type="checkbox" name="<?php echo esc_attr( $o ); ?>[featured_on]" value="1" <?php checked( $s['featured_on'] ); ?>>
+						<?php esc_html_e( 'Show what is featured in Planning Center at the top of the page', 'comms-church-links' ); ?>
+					</label>
+					<p class="description"><?php esc_html_e( 'Whatever you announce from the stage, in the bulletin or on social, mark it Featured in Planning Center Calendar (or feature the sign-up in Registrations) and it appears here within 15 minutes. Unfeature it, or let the date pass, and it goes away. Nothing to update here.', 'comms-church-links' ); ?></p>
+					<?php self::pco_fields( $s ); ?>
+				</section>
+
+				<section class="chs-card">
 					<h2><?php esc_html_e( 'Church Center', 'comms-church-links' ); ?></h2>
 					<label class="chs-field">
 						<span><?php esc_html_e( 'Church Center address', 'comms-church-links' ); ?></span>
@@ -515,7 +530,6 @@ class CHS_Settings {
 						<label><input type="radio" name="<?php echo esc_attr( $o ); ?>[events_source]" value="ics" <?php checked( $s['events_source'], 'ics' ); ?>> <?php esc_html_e( 'Calendar feed (a public iCal link, such as Google Calendar\'s)', 'comms-church-links' ); ?></label>
 						<label><input type="radio" name="<?php echo esc_attr( $o ); ?>[events_source]" value="tec" <?php checked( $s['events_source'], 'tec' ); ?> <?php disabled( ! $tec ); ?>> <?php esc_html_e( 'The Events Calendar plugin on this site', 'comms-church-links' ); ?><?php echo $tec ? '' : ' <em>' . esc_html__( '(not installed)', 'comms-church-links' ) . '</em>'; ?></label>
 					</fieldset>
-					<?php self::pco_fields( $s ); ?>
 					<div class="chs-grid">
 						<?php
 						self::text( 'ics_url', __( 'Calendar feed link', 'comms-church-links' ), $s, __( 'Starts with webcal:// or https:// and usually ends in .ics. Refreshed every hour.', 'comms-church-links' ), 'url' );
@@ -529,7 +543,7 @@ class CHS_Settings {
 
 				<section class="chs-card">
 					<h2><?php esc_html_e( 'Links', 'comms-church-links' ); ?></h2>
-					<p class="description"><?php esc_html_e( 'Drag to reorder. A watched page always links to the newest item on it, like this week\'s bulletin or the latest sermon. Links with no address yet, or Church Center links without a Church Center address, stay hidden. In the phone layout, up to four sit in the dock.', 'comms-church-links' ); ?></p>
+					<p class="description"><?php esc_html_e( 'Drag to reorder. A latest-post link always opens the newest post in a sermon or news archive. Links with no address yet, or Church Center links without a Church Center address, stay hidden. In the phone layout, up to four sit in the dock.', 'comms-church-links' ); ?></p>
 					<div id="chs-apps" class="chs-apps">
 						<?php
 						foreach ( $s['apps'] as $i => $app ) {
@@ -695,7 +709,7 @@ class CHS_Settings {
 				</p>
 			<?php else : ?>
 				<p class="description">
-					<?php esc_html_e( 'Create a Personal Access Token at api.planningcenteronline.com (Personal Access Tokens → New) and paste its Application ID and Secret here. Only events marked to show in Church Center appear, and only the place name, never the street address.', 'comms-church-links' ); ?>
+					<?php esc_html_e( 'Create a Personal Access Token at api.planningcenteronline.com (Personal Access Tokens → New) and paste its Application ID and Secret here. The same key feeds Featured and, if you pick it under Events, the event list. Only events shown in Church Center appear, and only the place name, never the street address.', 'comms-church-links' ); ?>
 				</p>
 			<?php endif; ?>
 			<div class="chs-grid">
@@ -708,8 +722,21 @@ class CHS_Settings {
 			<?php if ( $own ) : ?>
 				<label><input type="checkbox" name="<?php echo esc_attr( $o ); ?>[pco_clear]" value="1"> <?php esc_html_e( 'Remove this key', 'comms-church-links' ); ?></label>
 			<?php endif; ?>
-			<?php if ( 'pco' === $s['events_source'] && is_array( $status ) ) : ?>
-				<p class="chs-pco-status <?php echo $status['ok'] ? 'is-ok' : 'is-error'; ?>">
+			<?php
+			$featured = get_option( CHS_Events::FEATURED_STATUS );
+			$events   = 'pco' === $s['events_source'] && is_array( $status );
+			// A bad key fails both the same way; say it once.
+			if ( $s['featured_on'] && is_array( $featured ) && ( $featured['ok'] || ! $events || $status['ok'] ) ) :
+				?>
+				<p class="chs-pco-status chs-featured-status <?php echo $featured['ok'] ? 'is-ok' : 'is-error'; ?>">
+					<?php
+					/* translators: 1: status message, 2: time ago */
+					echo esc_html( sprintf( __( 'Featured: %1$s Checked %2$s ago.', 'comms-church-links' ), $featured['msg'], human_time_diff( $featured['time'] ) ) );
+					?>
+				</p>
+			<?php endif; ?>
+			<?php if ( $events ) : ?>
+				<p class="chs-pco-status chs-events-status <?php echo $status['ok'] ? 'is-ok' : 'is-error'; ?>">
 					<?php
 					/* translators: 1: status message, 2: time ago */
 					echo esc_html( sprintf( __( '%1$s Checked %2$s ago.', 'comms-church-links' ), $status['msg'], human_time_diff( $status['time'] ) ) );
@@ -727,27 +754,24 @@ class CHS_Settings {
 	 */
 	private static function watch_status( $app ) {
 		if ( 'watch' !== $app['type'] || ! $app['url'] ) {
-			echo '<small class="chs-watch-help">' . esc_html__( 'Point it at your bulletin page, a sermon archive or a news page. When the page changes, this link follows the newest item on it: no approval needed.', 'comms-church-links' ) . '</small>';
+			echo '<small class="chs-watch-help">' . esc_html__( 'Point it at your sermon archive or news page. It opens the newest post, and shows "New" for a week after one is published.', 'comms-church-links' ) . '</small>';
 			return;
 		}
 		$type = CHS_Watch::post_type_for( $app['url'] );
-		$w    = CHS_Watch::resolve( $app );
-		if ( ! $w ) {
-			echo '<small class="chs-watch-now is-empty">' . esc_html__( 'No matching link on that page yet, so this app stays hidden.', 'comms-church-links' ) . '</small>';
+		if ( ! $type ) {
+			echo '<small class="chs-watch-now is-empty">' . esc_html__( 'That isn\'t a post archive on this site, so this just links to the page.', 'comms-church-links' ) . '</small>';
 			return;
 		}
-		$obj = $type ? get_post_type_object( $type ) : null;
+		$w = CHS_Watch::resolve( $app );
+		if ( ! $w ) {
+			echo '<small class="chs-watch-now is-empty">' . esc_html__( 'No matching post yet, so this link stays hidden.', 'comms-church-links' ) . '</small>';
+			return;
+		}
 		printf(
-			'<small class="chs-watch-now">%1$s <a href="%2$s" target="_blank" rel="noopener">%3$s</a> %4$s</small>',
-			esc_html__( 'Now links to', 'comms-church-links' ),
+			'<small class="chs-watch-now">%1$s <a href="%2$s" target="_blank" rel="noopener">%3$s</a></small>',
+			esc_html__( 'Now opens', 'comms-church-links' ),
 			esc_url( $w['href'] ),
-			esc_html( $w['text'] ),
-			esc_html(
-				$obj
-					/* translators: %s: post type name, like Sermons */
-					? sprintf( __( '(the newest of your %s, checked on every visit)', 'comms-church-links' ), $obj->labels->name )
-					: __( '(re-checked when that page is saved, and daily)', 'comms-church-links' )
-			)
+			esc_html( $w['text'] )
 		);
 	}
 
@@ -828,7 +852,7 @@ class CHS_Settings {
 			<label><span><?php esc_html_e( 'Color', 'comms-church-links' ); ?></span>
 				<input class="chs-color" type="color" name="<?php echo esc_attr( $n . '[color]' ); ?>" value="<?php echo esc_attr( $app['color'] ); ?>">
 			</label>
-			<label class="chs-url-field"><span class="chs-url-link"><?php esc_html_e( 'Link', 'comms-church-links' ); ?></span><span class="chs-url-watch"><?php esc_html_e( 'Page to watch', 'comms-church-links' ); ?></span>
+			<label class="chs-url-field"><span class="chs-url-link"><?php esc_html_e( 'Link', 'comms-church-links' ); ?></span><span class="chs-url-watch"><?php esc_html_e( 'Archive page', 'comms-church-links' ); ?></span>
 				<input type="url" name="<?php echo esc_attr( $n . '[url]' ); ?>" value="<?php echo esc_attr( $app['url'] ); ?>" placeholder="https://">
 			</label>
 			<label><span><?php esc_html_e( 'Where', 'comms-church-links' ); ?></span>
@@ -839,7 +863,7 @@ class CHS_Settings {
 			</label>
 			<button type="button" class="button-link chs-remove"><?php esc_html_e( 'Remove', 'comms-church-links' ); ?></button>
 			<div class="chs-watch-field">
-				<label><span><?php esc_html_e( 'Only links containing (optional)', 'comms-church-links' ); ?></span>
+				<label><span><?php esc_html_e( 'Only posts containing (optional)', 'comms-church-links' ); ?></span>
 					<input type="text" maxlength="40" name="<?php echo esc_attr( $n . '[match]' ); ?>" value="<?php echo esc_attr( $app['match'] ); ?>" placeholder="<?php esc_attr_e( 'bulletin', 'comms-church-links' ); ?>">
 				</label>
 				<?php self::watch_status( $app ); ?>

@@ -9,7 +9,6 @@ const { test, expect } = require('@playwright/test');
 const PHP_ERRORS = /Fatal error|Parse error|Warning: |Notice: |Deprecated: /;
 
 const SETTINGS = '/wp-admin/options-general.php?page=church-links';
-const BULLETIN = /\/uploads\/2026\/10\/bulletin-2026-10-26\.pdf$/;
 
 async function expectClean(page) {
   const body = await page.locator('body').innerText();
@@ -84,10 +83,11 @@ test('first visit to settings scans the site and shows the review', async ({ pag
   await expectFinding(review, 'Address', '212 Peach Bottom Road, Willow Street, PA 17584', true);
   await expect(review).not.toContainText('11 AM ADDRESS');
   await expectFinding(review, 'Town and state', 'Willow Street, PA', true);
-  // A bulletin page and a sermon archive come in as watched links.
+  // A bulletin page comes in as a plain link; a sermon archive opens its newest sermon.
   await expectFinding(review, 'Bulletin', '/bulletin/', true);
-  await expect(review.locator('.chs-findings li', { hasText: '/bulletin/' })).toContainText('Watched');
+  await expect(review.locator('.chs-findings li', { hasText: '/bulletin/' })).not.toContainText('newest');
   await expectFinding(review, 'Sermons', '/sermons/', true);
+  await expect(review.locator('.chs-findings li', { hasText: '/sermons/' })).toContainText('Always opens the newest one.');
 
   await page.getByRole('button', { name: 'Use selected' }).click();
   await expect(page.locator('.notice-success')).toContainText(/Filled in \d+ settings? from your site/);
@@ -106,28 +106,26 @@ test('settings save and persist', async ({ page }) => {
   await expect(page.locator('#setting-error-settings_updated')).toBeVisible();
   await expectClean(page);
   await expect(page.locator('input[name="chs_settings[church_name]"]')).toHaveValue('Harbor Church Smoke');
-  // Watched links say what they point at right now.
-  const bulletin = page.locator('.chs-app[data-type="watch"]', { has: page.locator('input[value$="/bulletin/"]') });
-  await expect(bulletin.locator('.chs-watch-now')).toContainText('Bulletin – October 26, 2026');
+  // Latest-post links say what they open right now.
+  const sermons = page.locator('.chs-app[data-type="watch"]', { has: page.locator('input[value$="/sermons/"]') });
+  await expect(sermons.locator('.chs-watch-now')).toContainText('Rest for the Weary');
   // The QR code is drawn for the live address.
   await expect(page.locator('#chs-qr svg path')).toHaveAttribute('d', /^M/);
   await expect(page.getByRole('button', { name: 'Download QR (PNG)' })).toBeVisible();
 });
 
-test('/links is a link list that follows watched pages', async ({ page }) => {
+test('/links is a link list that follows the newest sermon', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   const res = await page.goto('/links/');
   expect(res.status()).toBe(200);
   await expectClean(page);
   await expect(page.locator('h1')).toHaveText('Harbor Church Smoke');
   await expect(page.locator('.cl-next [data-svc="time"]')).not.toBeEmpty();
+  // No Planning Center key yet, so nothing is featured.
+  await expect(page.locator('.cl-featured')).toHaveCount(0);
 
   const links = page.locator('nav.cl-links');
-  const bulletin = links.locator('a.cl-link', { hasText: 'Bulletin' });
-  // The newest bulletin by date, though it is listed last on the page.
-  await expect(bulletin).toHaveAttribute('href', BULLETIN);
-  await expect(bulletin.locator('.cl-detail')).toHaveText('Bulletin – October 26, 2026');
-  await expect(bulletin.locator('.cl-new')).toHaveCount(0);
+  await expect(links.locator('a.cl-link', { hasText: 'Bulletin' })).toHaveAttribute('href', /\/bulletin\/$/);
   const sermons = links.locator('a.cl-link', { hasText: 'Sermons' });
   await expect(sermons.locator('.cl-detail')).toHaveText('Rest for the Weary');
 
@@ -138,14 +136,10 @@ test('/links is a link list that follows watched pages', async ({ page }) => {
   await links.locator('summary', { hasText: 'Contact' }).click();
   await expect(page.locator('#cl-contact')).toContainText('555-0100');
 
-  // The church posts next week's bulletin and a new sermon; the page follows with no one approving it.
-  await page.goto('/wp-admin/?chs_test_bulletin=1');
-  await expect(page.locator('body')).toContainText('chs bulletin posted');
+  // The church posts a new sermon; the page follows with no one approving it.
   await page.goto('/wp-admin/?chs_test_sermon=1');
   await expect(page.locator('body')).toContainText('chs sermon posted');
   await page.goto('/links/');
-  await expect(bulletin).toHaveAttribute('href', /bulletin-2026-11-02\.pdf$/);
-  await expect(bulletin.locator('.cl-new')).toHaveText('New');
   await expect(sermons.locator('.cl-detail')).toHaveText('When God Feels Far');
   await expect(sermons.locator('.cl-new')).toHaveText('New');
 });
@@ -188,9 +182,8 @@ test('/links renders and swipe up unlocks it', async ({ page }) => {
   await expect(screen).toHaveClass(/\bunlocked\b/);
   await expect(page.locator('#home')).not.toHaveAttribute('inert');
   await expect(page.locator('#home nav.apps')).toBeVisible();
-  // Watched links work here too, with a badge when they changed this week.
-  await expect(page.locator('#home a.app', { hasText: 'Bulletin' })).toHaveAttribute('href', /bulletin-2026-11-02\.pdf$/);
-  await expect(page.locator('#home a.app', { hasText: 'Bulletin' }).locator('.badge')).toHaveCount(1);
+  // Latest-post links work here too, with a badge for a sermon from this week.
+  await expect(page.locator('#home a.app', { hasText: 'Sermons' }).locator('.badge')).toHaveCount(1);
 });
 
 test('Planning Center source lists only Church Center events', async ({ page }) => {
@@ -201,12 +194,13 @@ test('Planning Center source lists only Church Center events', async ({ page }) 
   await page.locator('input[name="chs_settings[pco_secret]"]').fill('wrong-secret');
   await page.locator('#chs-form').getByRole('button', { name: 'Save changes' }).click();
   // A bad key says so on the settings page instead of failing silently.
-  await expect(page.locator('.chs-pco-status.is-error')).toContainText('Invalid Application ID or Secret.');
+  await expect(page.locator('.chs-events-status.is-error')).toContainText('Invalid Application ID or Secret.');
+  await expect(page.locator('.chs-pco-status.is-error')).toHaveCount(1);
 
   await page.locator('input[name="chs_settings[pco_app_id]"]').fill('test-app-id');
   await page.locator('input[name="chs_settings[pco_secret]"]').fill('test-secret');
   await page.locator('#chs-form').getByRole('button', { name: 'Save changes' }).click();
-  await expect(page.locator('.chs-pco-status.is-ok')).toContainText('1 event is shown in Church Center.');
+  await expect(page.locator('.chs-events-status.is-ok')).toContainText('1 event is shown in Church Center.');
   await expectClean(page);
   // The secret is never printed back into the page.
   const secret = page.locator('input[name="chs_settings[pco_secret]"]');
@@ -233,4 +227,44 @@ test('Planning Center source lists only Church Center events', async ({ page }) 
   await expect(sheet).not.toContainText('Pending Picnic');
   await expect(sheet).not.toContainText('Elder Meeting');
   await expect(sheet.locator('a.ev').first()).toHaveAttribute('href', /harborchurch\.churchcenter\.com\/calendar\/event\//);
+});
+
+test('what is featured in Planning Center leads the page, and follows Planning Center', async ({ page }) => {
+  // Key saved by the test above; the fake API features Fall Retreat, plus one awaiting
+  // approval and one that isn't featured at all, which must not show.
+  await page.goto(SETTINGS);
+  await expect(page.locator('.chs-featured-status.is-ok')).toContainText('1 featured event.');
+  await page.locator('input[name="chs_settings[display]"][value="list"]').check();
+  await page.locator('#chs-form').getByRole('button', { name: 'Save changes' }).click();
+  await expect(page.locator('#setting-error-settings_updated')).toBeVisible();
+
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto('/links/');
+  await expectClean(page);
+  const feat = page.locator('.cl-featured .cl-feat');
+  await expect(feat).toHaveCount(1);
+  // A featured sign-up links straight to the registration, in Church Center.
+  await expect(feat.first()).toContainText('Fall Retreat');
+  await expect(feat.first()).toContainText('Sign up by Sunday.');
+  await expect(feat.first()).toHaveAttribute('href', 'https://harborchurch.churchcenter.com/registrations/events/201');
+  await expect(feat.first()).toHaveAttribute('data-cc', '');
+  await expect(page.locator('.cl-featured')).not.toContainText('Trunk or Treat');
+  await expect(page.locator('.cl-featured')).not.toContainText('Staff Retreat');
+  // It sits above the next service, the first thing people see.
+  const featY = (await page.locator('.cl-featured').boundingBox()).y;
+  const nowY = (await page.locator('.cl-now').boundingBox()).y;
+  expect(featY).toBeLessThan(nowY);
+
+  // Staff feature another event in Planning Center: it appears, soonest first, with no
+  // sign-up so it links to its Church Center page. Unfeature it and it's gone.
+  await page.goto('/wp-admin/?chs_test_feature=1');
+  await expect(page.locator('body')).toContainText('chs feature 1');
+  await page.goto('/links/');
+  await expect(feat).toHaveCount(2);
+  await expect(feat.nth(1)).toContainText('Christmas Eve Services');
+  await expect(feat.nth(1)).toHaveAttribute('href', /churchcenter\.com\/calendar\/event\/2045$/);
+  await page.goto('/wp-admin/?chs_test_feature=0');
+  await expect(page.locator('body')).toContainText('chs feature 0');
+  await page.goto('/links/');
+  await expect(feat).toHaveCount(1);
 });

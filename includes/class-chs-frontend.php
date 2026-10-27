@@ -230,6 +230,7 @@ class CHS_Frontend {
 			'grid'      => $grid,
 			'dock'      => $dock,
 			'events'    => $events,
+			'featured'  => CHS_Events::featured( $s ),
 			'has_feed'  => $has_feed,
 			'cc'        => $cc,
 			'maps'      => $maps,

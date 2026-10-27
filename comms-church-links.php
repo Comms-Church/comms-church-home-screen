@@ -43,7 +43,7 @@ register_activation_hook( __FILE__, array( 'CHS_Frontend', 'activate' ) );
 register_deactivation_hook(
 	__FILE__,
 	function () {
-		wp_clear_scheduled_hook( CHS_Watch::CRON );
+		wp_clear_scheduled_hook( 'chs_watch_daily' ); // Left by 0.3.0 dev builds.
 		flush_rewrite_rules();
 	}
 );

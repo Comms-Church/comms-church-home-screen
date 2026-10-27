@@ -1,6 +1,7 @@
 <?php
 /**
- * Upcoming events from Planning Center (Church Center events), a calendar feed (iCal) or The Events Calendar.
+ * Upcoming events from Planning Center (Church Center events), a calendar feed (iCal) or The Events Calendar,
+ * and the events the church has marked Featured in Planning Center.
  *
  * @package ChurchLinks
  */
@@ -17,6 +18,11 @@ class CHS_Events {
 	const MAXGEN = 400; // Safety cap on generated occurrences per event.
 	const STATUS = 'chs_events_status';
 	const PCO    = 'https://api.planningcenteronline.com/calendar/v2';
+
+	const FEATURED        = 'chs_featured_cache';
+	const FEATURED_STATUS = 'chs_featured_status';
+	const FEATURED_TTL    = 15 * MINUTE_IN_SECONDS;
+	const FEATURED_MAX    = 6;
 
 	/**
 	 * Upcoming events, soonest first.
@@ -160,20 +166,8 @@ class CHS_Events {
 			self::status( false, __( 'No Planning Center API key yet.', 'comms-church-links' ) );
 			return null;
 		}
-		$auth = array( 'Authorization' => 'Basic ' . base64_encode( $cred['app_id'] . ':' . $cred['secret'] ) );
-		$get  = function ( $url ) use ( $auth ) {
-			$res = wp_safe_remote_get( 0 === strpos( $url, 'https://' ) ? $url : self::PCO . $url, array( 'headers' => $auth, 'timeout' => 10 ) );
-			if ( is_wp_error( $res ) ) {
-				return $res;
-			}
-			$body = json_decode( wp_remote_retrieve_body( $res ), true );
-			$code = (int) wp_remote_retrieve_response_code( $res );
-			if ( 200 !== $code || ! is_array( $body ) ) {
-				$msg = isset( $body['errors'][0]['detail'] ) ? $body['errors'][0]['detail'] : ( isset( $body['errors'][0]['title'] ) ? $body['errors'][0]['title'] : '' );
-				/* translators: %d: HTTP status code */
-				return new WP_Error( 'chs_pco', $msg ? $msg : sprintf( __( 'Planning Center answered with error %d.', 'comms-church-links' ), $code ) );
-			}
-			return $body;
+		$get = function ( $url ) use ( $cred ) {
+			return self::pco_get( $cred, $url );
 		};
 
 		// Which events Church Center shows. Most churches publish a handful of the
@@ -227,6 +221,147 @@ class CHS_Events {
 		/* translators: %d: number of events */
 		self::status( true, sprintf( _n( '%d event is shown in Church Center.', '%d events are shown in Church Center.', count( $events ), 'comms-church-links' ), count( $events ) ), $cred['from'] );
 		return array_slice( $out, 0, 200 );
+	}
+
+	/**
+	 * One Planning Center API request.
+	 *
+	 * @param array  $cred    From pco_credentials().
+	 * @param string $url     Path under /calendar/v2, or a full next-page link.
+	 * @param array  $headers Extra headers.
+	 * @return array|WP_Error Decoded body.
+	 */
+	private static function pco_get( $cred, $url, $headers = array() ) {
+		$headers['Authorization'] = 'Basic ' . base64_encode( $cred['app_id'] . ':' . $cred['secret'] );
+		$res = wp_safe_remote_get( 0 === strpos( $url, 'https://' ) ? $url : self::PCO . $url, array( 'headers' => $headers, 'timeout' => 10 ) );
+		if ( is_wp_error( $res ) ) {
+			return $res;
+		}
+		$body = json_decode( wp_remote_retrieve_body( $res ), true );
+		$code = (int) wp_remote_retrieve_response_code( $res );
+		if ( 200 !== $code || ! is_array( $body ) ) {
+			$msg = isset( $body['errors'][0]['detail'] ) ? $body['errors'][0]['detail'] : ( isset( $body['errors'][0]['title'] ) ? $body['errors'][0]['title'] : '' );
+			/* translators: %d: HTTP status code */
+			return new WP_Error( 'chs_pco', $msg ? $msg : sprintf( __( 'Planning Center answered with error %d.', 'comms-church-links' ), $code ) );
+		}
+		return $body;
+	}
+
+	/**
+	 * What the church is promoting right now: the events marked Featured in Planning
+	 * Center Calendar. Sign-ups inherit Featured from Registrations, so a featured
+	 * registration shows up here too. Feature or unfeature it there and /links follows
+	 * within FEATURED_TTL; nobody touches this plugin.
+	 *
+	 * @param array $s Settings.
+	 * @return array[] Each: title, summary, image, start, all_day, url, cc. Soonest first.
+	 */
+	public static function featured( $s ) {
+		if ( empty( $s['featured_on'] ) ) {
+			return array();
+		}
+		$cred = self::pco_credentials( $s );
+		if ( ! $cred ) {
+			return array();
+		}
+		$items = get_transient( self::FEATURED );
+		if ( ! is_array( $items ) ) {
+			$items = self::featured_from_pco( $cred );
+			if ( null === $items ) {
+				set_transient( self::FEATURED, array(), 10 * MINUTE_IN_SECONDS );
+				return array();
+			}
+			set_transient( self::FEATURED, $items, self::FEATURED_TTL );
+		}
+		// Each item carries its next few dates; show the first one that hasn't passed.
+		$out = array();
+		foreach ( $items as $it ) {
+			foreach ( $it['dates'] as $d ) {
+				if ( $d['start'] + ( $d['all_day'] ? DAY_IN_SECONDS : 2 * HOUR_IN_SECONDS ) > time() ) {
+					unset( $it['dates'] );
+					$out[] = array_merge( $it, $d );
+					break;
+				}
+			}
+		}
+		usort(
+			$out,
+			function ( $a, $b ) {
+				return $a['start'] - $b['start'];
+			}
+		);
+		return array_slice( $out, 0, self::FEATURED_MAX );
+	}
+
+	/**
+	 * Fetch featured, approved, Church Center events and their next dates.
+	 *
+	 * @param array $cred From pco_credentials().
+	 * @return array|null Null when Planning Center can't be reached.
+	 */
+	private static function featured_from_pco( $cred ) {
+		// featured is documented from API version 2022-07-07; ask for it by name so an
+		// older default version on the key doesn't quietly drop the filter.
+		$ver  = array( 'X-PCO-API-Version' => '2022-07-07' );
+		$body = self::pco_get( $cred, '/events?per_page=25&filter=future&where[featured]=true&where[visible_in_church_center]=true', $ver );
+		if ( is_wp_error( $body ) ) {
+			self::featured_status( false, $body->get_error_message(), $cred['from'] );
+			return null;
+		}
+		$out = array();
+		foreach ( $body['data'] as $e ) {
+			$a = $e['attributes'];
+			// Checked again here, in case Planning Center ever ignores a filter.
+			if ( empty( $a['featured'] ) || empty( $a['visible_in_church_center'] ) || ! isset( $a['approval_status'] ) || 'A' !== $a['approval_status'] ) {
+				continue;
+			}
+			$inst = self::pco_get( $cred, '/events/' . rawurlencode( $e['id'] ) . '/event_instances?filter=future&order=starts_at&per_page=3', $ver );
+			if ( is_wp_error( $inst ) ) {
+				self::featured_status( false, $inst->get_error_message(), $cred['from'] );
+				return null;
+			}
+			$dates = array();
+			$page  = '';
+			foreach ( $inst['data'] as $in ) {
+				$ts = isset( $in['attributes']['starts_at'] ) ? strtotime( $in['attributes']['starts_at'] ) : false;
+				if ( $ts ) {
+					$dates[] = array( 'start' => $ts, 'all_day' => ! empty( $in['attributes']['all_day_event'] ) );
+					if ( '' === $page && ! empty( $in['attributes']['church_center_url'] ) ) {
+						$page = esc_url_raw( $in['attributes']['church_center_url'] );
+					}
+				}
+			}
+			if ( ! $dates ) {
+				continue;
+			}
+			// A sign-up link is the action people were told about; the event page is the fallback.
+			$url   = ! empty( $a['registration_url'] ) ? esc_url_raw( $a['registration_url'] ) : $page;
+			$out[] = array(
+				'title'   => sanitize_text_field( $a['name'] ),
+				'summary' => isset( $a['summary'] ) ? wp_trim_words( sanitize_text_field( $a['summary'] ), 18 ) : '',
+				'image'   => ! empty( $a['image_url'] ) ? esc_url_raw( $a['image_url'] ) : '',
+				'url'     => $url,
+				'cc'      => $url && CHS_Frontend::is_cc( $url ),
+				'dates'   => $dates,
+			);
+			if ( count( $out ) >= 12 ) {
+				break;
+			}
+		}
+		/* translators: %d: number of featured events */
+		self::featured_status( true, sprintf( _n( '%d featured event.', '%d featured events.', count( $out ), 'comms-church-links' ), count( $out ) ), $cred['from'] );
+		return $out;
+	}
+
+	/**
+	 * Remember how the last featured fetch went, for the settings page.
+	 *
+	 * @param bool   $ok   Worked.
+	 * @param string $msg  Message.
+	 * @param string $from Where the key came from.
+	 */
+	private static function featured_status( $ok, $msg, $from ) {
+		update_option( self::FEATURED_STATUS, array( 'ok' => $ok, 'msg' => $msg, 'from' => $from, 'time' => time() ), false );
 	}
 
 	/**
